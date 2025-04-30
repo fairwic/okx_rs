@@ -1,0 +1,385 @@
+use crate::client::OkxClient;
+use crate::error::Error;
+use crate::dto::trade_model::{Order, FeeRate};
+use reqwest::Method;
+use serde_json::json;
+use crate::api::API_TRADE_PATH;
+
+/// OKX交易API
+/// 提供交易相关的API访问
+#[derive(Debug)]
+pub struct OkxTrade {
+    /// API客户端
+    client: OkxClient,
+}
+
+impl OkxTrade {
+    /// 创建一个新的OkxTrade实例
+    pub fn new(client: OkxClient) -> Self {
+        Self { client }
+    }
+    
+    /// 从环境变量创建一个新的OkxTrade实例
+    pub fn from_env() -> Result<Self, Error> {
+        let client = OkxClient::from_env()?;
+        Ok(Self { client })
+    }
+    
+    /// 获取内部客户端引用
+    pub fn client(&self) -> &OkxClient {
+        &self.client
+    }
+
+    /// 下单
+    pub async fn place_order(
+        &self,
+        inst_id: &str,
+        side: &str,
+        ord_type: &str,
+        sz: &str,
+        td_mode: &str,
+        px: Option<&str>,
+        pos_side: Option<&str>,
+        cl_ord_id: Option<&str>,
+        tag: Option<&str>,
+        reduce_only: Option<bool>,
+    ) -> Result<serde_json::Value, Error> {
+        let path = format!("{}/order", API_TRADE_PATH);
+        
+        let mut body = json!({
+            "instId": inst_id,
+            "side": side,
+            "ordType": ord_type,
+            "sz": sz,
+            "tdMode": td_mode,
+        });
+        
+        if let Some(price) = px {
+            body["px"] = json!(price);
+        }
+        
+        if let Some(position_side) = pos_side {
+            body["posSide"] = json!(position_side);
+        }
+        
+        if let Some(client_order_id) = cl_ord_id {
+            body["clOrdId"] = json!(client_order_id);
+        }
+        
+        if let Some(t) = tag {
+            body["tag"] = json!(t);
+        }
+        
+        if let Some(ro) = reduce_only {
+            body["reduceOnly"] = json!(ro);
+        }
+        
+        let body_str = serde_json::to_string(&body).map_err(Error::JsonError)?;
+        self.client.send_request::<serde_json::Value>(Method::POST, &path, &body_str).await
+    }
+    
+    /// 批量下单
+    pub async fn place_multiple_orders(
+        &self,
+        orders: Vec<serde_json::Value>,
+    ) -> Result<serde_json::Value, Error> {
+        let path = format!("{}/batch-orders", API_TRADE_PATH);
+        let body_str = serde_json::to_string(&orders).map_err(Error::JsonError)?;
+        self.client.send_request::<serde_json::Value>(Method::POST, &path, &body_str).await
+    }
+    
+    /// 撤单
+    pub async fn cancel_order(
+        &self,
+        inst_id: &str,
+        ord_id: Option<&str>,
+        cl_ord_id: Option<&str>,
+    ) -> Result<serde_json::Value, Error> {
+        let path = format!("{}/cancel-order", API_TRADE_PATH);
+        
+        let mut body = json!({
+            "instId": inst_id,
+        });
+        
+        if let Some(order_id) = ord_id {
+            body["ordId"] = json!(order_id);
+        }
+        
+        if let Some(client_order_id) = cl_ord_id {
+            body["clOrdId"] = json!(client_order_id);
+        }
+        
+        let body_str = serde_json::to_string(&body).map_err(Error::JsonError)?;
+        self.client.send_request::<serde_json::Value>(Method::POST, &path, &body_str).await
+    }
+    
+    /// 批量撤单
+    pub async fn cancel_multiple_orders(
+        &self,
+        orders: Vec<serde_json::Value>,
+    ) -> Result<serde_json::Value, Error> {
+        let path = format!("{}/cancel-batch-orders", API_TRADE_PATH);
+        let body_str = serde_json::to_string(&orders).map_err(Error::JsonError)?;
+        self.client.send_request::<serde_json::Value>(Method::POST, &path, &body_str).await
+    }
+    
+    /// 修改订单
+    pub async fn amend_order(
+        &self,
+        inst_id: &str,
+        ord_id: Option<&str>,
+        cl_ord_id: Option<&str>,
+        req_id: Option<&str>,
+        new_sz: Option<&str>,
+        new_px: Option<&str>,
+    ) -> Result<serde_json::Value, Error> {
+        let path = format!("{}/amend-order", API_TRADE_PATH);
+        
+        let mut body = json!({
+            "instId": inst_id,
+        });
+        
+        if let Some(order_id) = ord_id {
+            body["ordId"] = json!(order_id);
+        }
+        
+        if let Some(client_order_id) = cl_ord_id {
+            body["clOrdId"] = json!(client_order_id);
+        }
+        
+        if let Some(request_id) = req_id {
+            body["reqId"] = json!(request_id);
+        }
+        
+        if let Some(new_size) = new_sz {
+            body["newSz"] = json!(new_size);
+        }
+        
+        if let Some(new_price) = new_px {
+            body["newPx"] = json!(new_price);
+        }
+        
+        let body_str = serde_json::to_string(&body).map_err(Error::JsonError)?;
+        self.client.send_request::<serde_json::Value>(Method::POST, &path, &body_str).await
+    }
+    
+    /// 获取订单信息
+    pub async fn get_order_details(
+        &self,
+        inst_id: &str,
+        ord_id: Option<&str>,
+        cl_ord_id: Option<&str>,
+    ) -> Result<Vec<Order>, Error> {
+        let mut path = format!("{}/order?instId={}", API_TRADE_PATH, inst_id);
+        
+        if let Some(order_id) = ord_id {
+            path.push_str(&format!("&ordId={}", order_id));
+        }
+        
+        if let Some(client_order_id) = cl_ord_id {
+            path.push_str(&format!("&clOrdId={}", client_order_id));
+        }
+        
+        self.client.send_request::<Vec<Order>>(Method::GET, &path, "").await
+    }
+    
+    /// 获取未成交订单列表
+    pub async fn get_pending_orders(
+        &self,
+        inst_type: Option<&str>,
+        inst_id: Option<&str>,
+        ord_type: Option<&str>,
+        state: Option<&str>,
+        after: Option<&str>,
+        before: Option<&str>,
+        limit: Option<u32>,
+    ) -> Result<Vec<Order>, Error> {
+        let mut path = format!("{}/orders-pending", API_TRADE_PATH);
+        let mut query_params = vec![];
+        
+        if let Some(it) = inst_type {
+            query_params.push(format!("instType={}", it));
+        }
+        
+        if let Some(id) = inst_id {
+            query_params.push(format!("instId={}", id));
+        }
+        
+        if let Some(ot) = ord_type {
+            query_params.push(format!("ordType={}", ot));
+        }
+        
+        if let Some(s) = state {
+            query_params.push(format!("state={}", s));
+        }
+        
+        if let Some(a) = after {
+            query_params.push(format!("after={}", a));
+        }
+        
+        if let Some(b) = before {
+            query_params.push(format!("before={}", b));
+        }
+        
+        if let Some(l) = limit {
+            query_params.push(format!("limit={}", l));
+        }
+        
+        if !query_params.is_empty() {
+            path.push_str(&format!("?{}", query_params.join("&")));
+        }
+        
+        self.client.send_request::<Vec<Order>>(Method::GET, &path, "").await
+    }
+    
+    /// 获取历史订单记录（最近7天）
+    pub async fn get_order_history(
+        &self,
+        inst_type: &str,
+        inst_id: Option<&str>,
+        ord_type: Option<&str>,
+        state: Option<&str>,
+        after: Option<&str>,
+        before: Option<&str>,
+        limit: Option<u32>,
+    ) -> Result<Vec<Order>, Error> {
+        let mut path = format!("{}/orders-history?instType={}", API_TRADE_PATH, inst_type);
+        
+        if let Some(id) = inst_id {
+            path.push_str(&format!("&instId={}", id));
+        }
+        
+        if let Some(ot) = ord_type {
+            path.push_str(&format!("&ordType={}", ot));
+        }
+        
+        if let Some(s) = state {
+            path.push_str(&format!("&state={}", s));
+        }
+        
+        if let Some(a) = after {
+            path.push_str(&format!("&after={}", a));
+        }
+        
+        if let Some(b) = before {
+            path.push_str(&format!("&before={}", b));
+        }
+        
+        if let Some(l) = limit {
+            path.push_str(&format!("&limit={}", l));
+        }
+        
+        self.client.send_request::<Vec<Order>>(Method::GET, &path, "").await
+    }
+    
+    /// 获取成交明细
+    pub async fn get_fills(
+        &self,
+        inst_type: Option<&str>,
+        inst_id: Option<&str>,
+        ord_id: Option<&str>,
+        after: Option<&str>,
+        before: Option<&str>,
+        limit: Option<u32>,
+    ) -> Result<serde_json::Value, Error> {
+        let mut path = format!("{}/fills", API_TRADE_PATH);
+        let mut query_params = vec![];
+        
+        if let Some(it) = inst_type {
+            query_params.push(format!("instType={}", it));
+        }
+        
+        if let Some(id) = inst_id {
+            query_params.push(format!("instId={}", id));
+        }
+        
+        if let Some(oid) = ord_id {
+            query_params.push(format!("ordId={}", oid));
+        }
+        
+        if let Some(a) = after {
+            query_params.push(format!("after={}", a));
+        }
+        
+        if let Some(b) = before {
+            query_params.push(format!("before={}", b));
+        }
+        
+        if let Some(l) = limit {
+            query_params.push(format!("limit={}", l));
+        }
+        
+        if !query_params.is_empty() {
+            path.push_str(&format!("?{}", query_params.join("&")));
+        }
+        
+        self.client.send_request::<serde_json::Value>(Method::GET, &path, "").await
+    }
+    
+    /// 获取交易产品费率
+    pub async fn get_fee_rates(
+        &self,
+        inst_type: &str,
+        inst_id: Option<&str>,
+        uly: Option<&str>,
+    ) -> Result<Vec<FeeRate>, Error> {
+        let mut path = format!("{}/trade-fee?instType={}", API_TRADE_PATH, inst_type);
+        
+        if let Some(id) = inst_id {
+            path.push_str(&format!("&instId={}", id));
+        }
+        
+        if let Some(underlying) = uly {
+            path.push_str(&format!("&uly={}", underlying));
+        }
+        
+        self.client.send_request::<Vec<FeeRate>>(Method::GET, &path, "").await
+    }
+    
+    /// 平仓 (从顶层trade模块合并)
+    pub async fn close_position(
+        &self,
+        inst_id: &str,
+        pos_side: Option<&str>,
+        mgn_mode: &str,
+    ) -> Result<serde_json::Value, Error> {
+        let path = format!("{}/close-position", API_TRADE_PATH);
+        
+        let mut body = json!({
+            "instId": inst_id,
+            "mgnMode": mgn_mode,
+        });
+        
+        if let Some(side) = pos_side {
+            body["posSide"] = json!(side);
+        }
+        
+        let body_str = serde_json::to_string(&body).map_err(Error::JsonError)?;
+        self.client.send_request::<serde_json::Value>(Method::POST, &path, &body_str).await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[tokio::test]
+    async fn test_place_order() {
+        // 仅作为示例，实际测试需要提供有效的值
+        let trade = OkxTrade::from_env().expect("无法从环境变量创建交易API");
+        let result = trade.place_order(
+            "BTC-USDT",
+            "buy",
+            "limit",
+            "0.001",
+            "cash",
+            Some("20000"),
+            None,
+            None,
+            None,
+            None,
+        ).await;
+        
+        println!("Place order result: {:?}", result);
+    }
+} 
