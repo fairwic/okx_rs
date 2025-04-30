@@ -1,11 +1,11 @@
 [package]
 name = "okx"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
-authors = ["Your Name <your.email@example.com>"]
+authors = ["fairwic <chaoliushishangfaner@gmail.com>"]
 description = "OKX交易所API SDK"
 license = "MIT"
-repository = "https://github.com/yourusername/okx-sdk-rust"
+repository = "https://github.com/fairwic/okx_rs"
 readme = "README.md"
 keywords = ["okx", "cryptocurrency", "trading", "api", "sdk"]
 categories = ["api-bindings", "finance"]
