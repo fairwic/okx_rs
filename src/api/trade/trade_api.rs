@@ -1,6 +1,6 @@
 use crate::client::OkxClient;
 use crate::error::Error;
-use crate::dto::trade_model::{Order, FeeRate};
+use crate::dto::trade::trade_dto::{FeeRate, Order, OrderReqDto, OrderResData};
 use reqwest::Method;
 use serde_json::json;
 use crate::api::API_TRADE_PATH;
@@ -33,49 +33,11 @@ impl OkxTrade {
     /// 下单
     pub async fn place_order(
         &self,
-        inst_id: &str,
-        side: &str,
-        ord_type: &str,
-        sz: &str,
-        td_mode: &str,
-        px: Option<&str>,
-        pos_side: Option<&str>,
-        cl_ord_id: Option<&str>,
-        tag: Option<&str>,
-        reduce_only: Option<bool>,
-    ) -> Result<serde_json::Value, Error> {
+        order_params: OrderReqDto,
+    ) -> Result<Vec<OrderResData>, Error> {
         let path = format!("{}/order", API_TRADE_PATH);
-        
-        let mut body = json!({
-            "instId": inst_id,
-            "side": side,
-            "ordType": ord_type,
-            "sz": sz,
-            "tdMode": td_mode,
-        });
-        
-        if let Some(price) = px {
-            body["px"] = json!(price);
-        }
-        
-        if let Some(position_side) = pos_side {
-            body["posSide"] = json!(position_side);
-        }
-        
-        if let Some(client_order_id) = cl_ord_id {
-            body["clOrdId"] = json!(client_order_id);
-        }
-        
-        if let Some(t) = tag {
-            body["tag"] = json!(t);
-        }
-        
-        if let Some(ro) = reduce_only {
-            body["reduceOnly"] = json!(ro);
-        }
-        
-        let body_str = serde_json::to_string(&body).map_err(Error::JsonError)?;
-        self.client.send_request::<serde_json::Value>(Method::POST, &path, &body_str).await
+        let body_str = serde_json::to_string(&order_params).map_err(Error::JsonError)?;
+        self.client.send_request::<Vec<OrderResData>>(Method::POST, &path, &body_str).await
     }
     
     /// 批量下单
@@ -368,16 +330,27 @@ mod tests {
         // 仅作为示例，实际测试需要提供有效的值
         let trade = OkxTrade::from_env().expect("无法从环境变量创建交易API");
         let result = trade.place_order(
-            "BTC-USDT",
-            "buy",
-            "limit",
-            "0.001",
-            "cash",
-            Some("20000"),
-            None,
-            None,
-            None,
-            None,
+            OrderReqDto {
+                inst_id: "BTC-USDT".to_string(),
+                side: "buy".to_string(),
+                ord_type: "limit".to_string(),
+                sz: "0.001".to_string(),
+                td_mode: "cash".to_string(),
+                px: Some("20000".to_string()),
+                pos_side: None,
+                cl_ord_id: None,
+                tag: None,
+                reduce_only: None,
+                ccy: None,
+                px_usd: None,
+                px_vol: None,
+                tgt_ccy: None,
+                ban_amend: None,
+                quick_mgn_type: None,
+                stp_id: None,
+                stp_mode: None,
+                attach_algo_ords: None,
+            }
         ).await;
         
         println!("Place order result: {:?}", result);

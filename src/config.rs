@@ -23,6 +23,7 @@ static INIT_ENV: Once = Once::new();
 /// 全局配置
 pub static CONFIG: Lazy<Config> = Lazy::new(|| {
     let mut config = Config::default();
+
     if let Ok(api_url) = env::var("OKX_API_URL") {
         config.api_url = api_url;
     }
@@ -42,11 +43,10 @@ pub static CONFIG: Lazy<Config> = Lazy::new(|| {
             config.request_expiration_ms = expiration;
         }
     }
-    if let Ok(value) = env::var("OKX_SIMULATED_TRADING").map(|v| v.parse::<String>()) {
-        if let Ok(value) = value {
-            config.is_simulated_trading = value;
-        }
+    if let Ok(value) = env::var("OKX_SIMULATED_TRADING") {
+        config.is_simulated_trading = value;
     }
+
     println!("config{:?}", config);
     config
 });
@@ -133,8 +133,6 @@ pub struct Credentials {
     pub api_secret: String,
     /// API密码
     pub passphrase: String,
-    /// 是否模拟交易环境
-    pub is_simulated_trading: String,
 }
 
 impl Credentials {
@@ -143,13 +141,11 @@ impl Credentials {
         api_key: impl Into<String>,
         api_secret: impl Into<String>,
         passphrase: impl Into<String>,
-        is_simulated_trading: impl Into<String>,
     ) -> Self {
         Self {
             api_key: api_key.into(),
             api_secret: api_secret.into(),
             passphrase: passphrase.into(),
-            is_simulated_trading: is_simulated_trading.into(),
         }
     }
 
@@ -167,15 +163,10 @@ impl Credentials {
         let passphrase = env::var("OKX_PASSPHRASE")
             .map_err(|_| Error::ConfigError("缺少环境变量: OKX_PASSPHRASE".to_string()))?;
 
-        let is_simulated_trading = env::var("OKX_IS_SIMULATED_TRADING").map_err(|_| {
-            Error::ConfigError("缺少环境变量: OKX_IS_SIMULATED_TRADING".to_string())
-        })?;
-
         Ok(Self::new(
             api_key,
             api_secret,
             passphrase,
-            is_simulated_trading,
         ))
     }
 }

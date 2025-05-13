@@ -1,11 +1,11 @@
 use reqwest::{Client, Method, StatusCode};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
-use log::{debug, info};
 
 use crate::config::{Credentials, CONFIG};
 use crate::error::Error;
 use crate::utils;
+use tracing::{debug, info};
 
 /// 通用的OKX API响应结构
 #[derive(Serialize, Deserialize, Debug)]
@@ -57,6 +57,7 @@ impl OkxClient {
     /// 从环境变量创建OKX客户端
     pub fn from_env() -> Result<Self, Error> {
         let credentials = Credentials::from_env()?;
+        info!("OKX credentials: {:?}", credentials);
         Self::new(credentials)
     }
     
@@ -82,7 +83,13 @@ impl OkxClient {
         path: &str,
         body: &str,
     ) -> Result<T, Error> {
+        info!("33333333333");
+        info!("OKX path: {}", path);
+        info!("OKX body: {}", body);
+        info!("OKX method: {}", method);
+
         let timestamp = utils::generate_timestamp();
+        info!("OKX timestamp: {}", timestamp);
         let signature = utils::generate_signature(
             &self.credentials.api_secret,
             &timestamp,
@@ -90,7 +97,7 @@ impl OkxClient {
             path,
             body,
         )?;
-        
+        info!("OKX signature: {}", signature);
         let exp_time = utils::generate_expiration_timestamp(self.request_expiration_ms);
         
         let url = format!("{}{}", self.base_url, path);
@@ -108,7 +115,8 @@ impl OkxClient {
         if self.is_simulated_trading == "1" {
             request_builder = request_builder.header("x-simulated-trading", "1");
         }
-        
+       
+        info!("OKX body_string: {}", body.to_string());
         let request_builder = request_builder.body(body.to_string());
         
         let response = request_builder.send().await.map_err(Error::HttpError)?;
@@ -117,7 +125,7 @@ impl OkxClient {
         let response_body = response.text().await.map_err(Error::HttpError)?;
         
         debug!("OKX API响应状态码: {}", status_code);
-        
+        info!("OKX API响应: {}", response_body);
         if status_code == StatusCode::OK {
             let result: OkxApiResponse<T> = serde_json::from_str(&response_body)
                 .map_err(|e| Error::JsonError(e))?;

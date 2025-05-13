@@ -1,1 +1,1 @@
-pub mod asset_model;
+pub mod asset_dto;

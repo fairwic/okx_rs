@@ -1,7 +1,7 @@
 use crate::client::OkxClient;
 use crate::error::Error;
-use crate::dto::public_data::public_data::{SystemTime, SystemStatus, EconomicEvent, RateLimit};
-use crate::dto::common::InstrumentInfo;
+use crate::dto::public_data::public_data_dto::{SystemTime, SystemStatus, EconomicEvent, RateLimit};
+use crate::dto::market::market_dto::InstrumentOkxResDto;
 use crate::api::API_PUBLIC_PATH;
 use reqwest::Method;
 
@@ -73,7 +73,7 @@ impl OkxPublicData {
         underlying: Option<&str>,
         inst_id: Option<&str>,
         inst_family: Option<&str>,
-    ) -> Result<Vec<InstrumentInfo>, Error> {
+    ) -> Result<Vec<InstrumentOkxResDto>, Error> {
         let mut path = format!("{}/instruments?instType={}", API_PUBLIC_PATH, inst_type);
         
         if let Some(uly) = underlying {
@@ -88,7 +88,7 @@ impl OkxPublicData {
             path.push_str(&format!("&instFamily={}", family));
         }
         
-        self.client.send_request::<Vec<InstrumentInfo>>(Method::GET, &path, "").await
+        self.client.send_request::<Vec<InstrumentOkxResDto>>(Method::GET, &path, "").await
     }
     
     /// 获取经济日历数据

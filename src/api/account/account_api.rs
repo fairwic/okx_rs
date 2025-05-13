@@ -2,10 +2,10 @@ use crate::api::API_ACCOUNT_PATH;
 use crate::client::OkxClient;
 use crate::config::Credentials;
 use crate::error::Error;
-use crate::dto::account_model::{AccountConfig, AccountRisk, Balance};
+use crate::dto::account::account_dto::{AccountConfig, AccountRisk, Balance, Position, SetLeverageRequest, TradingSwapNumResponseData};
 use reqwest::Method;
 use serde_json::json;
-use crate::dto::trade_model::PositionRespDto;
+use crate::dto::trade::trade_dto::PositionRespDto;
 
 /// OKX账户API
 /// 提供账户相关的API访问
@@ -20,7 +20,7 @@ impl OkxAccount {
     pub fn new() -> Self {
         Self {
             // 创建客户端
-            client: OkxClient::new(Credentials::new("api_key", "api_secret", "passphrase","1"))
+            client: OkxClient::new(Credentials::new("api_key", "api_secret", "passphrase"))
                 .unwrap(),
         }
     }
@@ -91,24 +91,11 @@ impl OkxAccount {
     /// 设置杠杆倍数
     pub async fn set_leverage(
         &self,
-        inst_id: &str,
-        leverage: &str,
-        margin_mode: &str,
-        pos_side: Option<&str>,
+        params: SetLeverageRequest
     ) -> Result<serde_json::Value, Error> {
         let path = format!("{}/set-leverage", API_ACCOUNT_PATH);
 
-        let mut body = json!({
-            "instId": inst_id,
-            "lever": leverage,
-            "mgnMode": margin_mode,
-        });
-
-        if let Some(side) = pos_side {
-            body["posSide"] = json!(side);
-        }
-
-        let body_str = serde_json::to_string(&body).map_err(Error::JsonError)?;
+        let body_str = serde_json::to_string(&params).map_err(Error::JsonError)?;
         self.client
             .send_request::<serde_json::Value>(Method::POST, &path, &body_str)
             .await
@@ -122,7 +109,7 @@ impl OkxAccount {
         ccy: Option<&str>,
         px: Option<&str>,
         leverage: Option<&str>,
-    ) -> Result<serde_json::Value, Error> {
+    ) -> Result<TradingSwapNumResponseData, Error> {
         let mut path = format!(
             "{}/max-size?instId={}&tdMode={}",
             API_ACCOUNT_PATH, inst_id, td_mode
@@ -141,7 +128,7 @@ impl OkxAccount {
         }
 
         self.client
-            .send_request::<serde_json::Value>(Method::GET, &path, "")
+            .send_request::<TradingSwapNumResponseData>(Method::GET, &path, "")
             .await
     }
 
@@ -210,7 +197,7 @@ impl OkxAccount {
         inst_type: Option<&str>,
         inst_id: Option<&str>,
         pos_id: Option<&str>,
-    ) -> Result<Vec<PositionRespDto>, Error> {
+    ) -> Result<Vec<Position>, Error> {
         let mut path = format!("{}/positions", API_ACCOUNT_PATH);
         let mut query_params = vec![];
 
@@ -231,7 +218,7 @@ impl OkxAccount {
         }
 
         self.client
-            .send_request::<Vec<PositionRespDto>>(Method::GET, &path, "")
+            .send_request::<Vec<Position>>(Method::GET, &path, "")
             .await
     }
 } 

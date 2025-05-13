@@ -1,6 +1,6 @@
 use crate::client::OkxClient;
 use crate::error::Error;
-use crate::dto::asset_model::{AssetBalance, TransferRecord, WithdrawalRecord, DepositRecord};
+use crate::dto::asset::asset_dto::{AssetBalance, TransferRecord, WithdrawalRecord, DepositRecord};
 use reqwest::Method;
 use serde_json::json;
 use crate::api::API_ASSET_PATH;
@@ -30,18 +30,34 @@ impl OkxAsset {
         &self.client
     }
 
-    /// 获取资产余额
+    // /// 获取资产余额
+    // pub async fn get_balances(
+    //     &self,
+    //     ccy: Option<&str>,
+    // ) -> Result<Vec<AssetBalance>, Error> {
+    //     let mut path = format!("{}/balances", API_ASSET_PATH);
+        
+    //     if let Some(currency) = ccy {
+    //         path.push_str(&format!("?ccy={}", currency));
+    //     }
+        
+    //     self.client.send_request::<Vec<AssetBalance>>(Method::GET, &path, "").await
+    // }
+
     pub async fn get_balances(
         &self,
-        ccy: Option<&str>,
+        ccy: Option<&Vec<String>>,
     ) -> Result<Vec<AssetBalance>, Error> {
-        let mut path = format!("{}/balances", API_ASSET_PATH);
-        
-        if let Some(currency) = ccy {
-            path.push_str(&format!("?ccy={}", currency));
+        // 币种，如 BTC
+        // 支持多币种查询（不超过20个），币种之间半角逗号分隔
+        let mut path = "/api/v5/asset/balances?".to_string();
+        if !ccy.is_none() {
+            let ccy_param = ccy.unwrap().join(",");
+            if !ccy_param.is_empty() {
+                path.push_str(&format!("&ccy={}", ccy_param));
+            }
         }
-        
-        self.client.send_request::<Vec<AssetBalance>>(Method::GET, &path, "").await
+        self.client.send_request(Method::GET, &path, "").await
     }
     
     /// 获取资金划转状态

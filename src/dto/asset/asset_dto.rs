@@ -9,10 +9,10 @@ pub struct AssetBalance {
     pub bal: String,
     /// 冻结余额
     #[serde(rename = "frozenBal")]
-    pub frozen_balance: String,
+    pub frozen_bal: String,
     /// 可用余额
     #[serde(rename = "availBal")]
-    pub available_balance: String,
+    pub avail_bal: String,
 }
 
 /// 资金划转记录

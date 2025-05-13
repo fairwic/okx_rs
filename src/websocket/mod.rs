@@ -12,4 +12,4 @@ pub use models::{
     WebSocketSubscription,
     WebSocketOperation,
 };
-pub use channel::{ChannelType, Args}; 
+pub use channel::{ChannelType, Args};

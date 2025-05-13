@@ -13,7 +13,10 @@ impl OkxBigData {
     pub fn new(client: OkxClient) -> Self {
         OkxBigData { client }
     }
-    
+    pub fn from_env() -> Result<Self,Error> {
+        let client = OkxClient::from_env()?;
+        Ok(OkxBigData::new(client))
+    }
     //获取交易大数据支持币种
     pub async fn get_support_coin(&self) -> Result<OkxApiResponse<SupportCoin>,Error> {
         // 币种，如 BTC

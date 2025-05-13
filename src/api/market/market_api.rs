@@ -1,6 +1,6 @@
 use crate::client::OkxClient;
 use crate::error::Error;
-use crate::dto::market_model::{Ticker, Candle, Depth, Instrument};
+use crate::dto::market::market_dto::{TickerOkxResDto, CandleOkxRespDto, Depth, InstrumentOkxResDto};
 use reqwest::Method;
 use crate::api::API_MARKET_PATH;
 
@@ -30,22 +30,22 @@ impl OkxMarket {
     }
     
     /// 获取单个产品行情信息
-    pub async fn get_ticker(&self, inst_id: &str) -> Result<Ticker, Error> {
+    pub async fn get_ticker(&self, inst_id: &str) -> Result<Vec<TickerOkxResDto>, Error> {
         let path = format!("{}/ticker?instId={}", API_MARKET_PATH, inst_id);
-        let tickers = self.client.send_request::<Vec<Ticker>>(Method::GET, &path, "").await?;
-        
-        tickers.into_iter().next()
-            .ok_or_else(|| Error::ParseError("获取行情数据失败: 空响应".to_string()))
+        let tickers = self.client.send_request::<Vec<TickerOkxResDto>>(Method::GET, &path, "").await?;
+        Ok(tickers)
+        // tickers.into_iter().next()
+        //     .ok_or_else(|| Error::ParseError("获取行情数据失败: 空响应".to_string()))
     }
     
     /// 获取多个产品行情信息
-    pub async fn get_tickers(&self, inst_type: &str) -> Result<Vec<Ticker>, Error> {
+    pub async fn get_tickers(&self, inst_type: &str) -> Result<Vec<TickerOkxResDto>, Error> {
         let path = format!("{}/tickers?instType={}", API_MARKET_PATH, inst_type);
-        self.client.send_request::<Vec<Ticker>>(Method::GET, &path, "").await
+        self.client.send_request::<Vec<TickerOkxResDto>>(Method::GET, &path, "").await
     }
     
     /// 获取指数行情
-    pub async fn get_index_tickers(&self, quot_ccy: Option<&str>, inst_id: Option<&str>) -> Result<Vec<Ticker>, Error> {
+    pub async fn get_index_tickers(&self, quot_ccy: Option<&str>, inst_id: Option<&str>) -> Result<Vec<TickerOkxResDto>, Error> {
         let mut path = format!("{}/index-tickers", API_MARKET_PATH);
         let mut query_params = vec![];
         
@@ -61,23 +61,22 @@ impl OkxMarket {
             path.push_str(&format!("?{}", query_params.join("&")));
         }
         
-        self.client.send_request::<Vec<Ticker>>(Method::GET, &path, "").await
+        self.client.send_request::<Vec<TickerOkxResDto>>(Method::GET, &path, "").await
     }
     
     /// 获取产品K线数据
     pub async fn get_candles(
         &self,
         inst_id: &str,
-        bar: Option<&str>,
+        bar: &str,
         after: Option<&str>,
         before: Option<&str>,
-        limit: Option<u32>,
-    ) -> Result<Vec<Candle>, Error> {
+        limit: Option<&str>,
+    ) -> Result<Vec<CandleOkxRespDto>, Error> {
         let mut path = format!("{}/candles?instId={}", API_MARKET_PATH, inst_id);
         
-        if let Some(b) = bar {
-            path.push_str(&format!("&bar={}", b));
-        }
+        path.push_str(&format!("&bar={}", bar));
+        // }
         
         if let Some(a) = after {
             path.push_str(&format!("&after={}", a));
@@ -91,23 +90,22 @@ impl OkxMarket {
             path.push_str(&format!("&limit={}", l));
         }
         
-        self.client.send_request::<Vec<Candle>>(Method::GET, &path, "").await
+        self.client.send_request::<Vec<CandleOkxRespDto>>(Method::GET, &path, "").await
     }
     
     /// 获取历史K线数据
     pub async fn get_history_candles(
         &self,
         inst_id: &str,
-        bar: Option<&str>,
+        bar: &str,
         after: Option<&str>,
         before: Option<&str>,
-        limit: Option<u32>,
-    ) -> Result<Vec<Candle>, Error> {
+        limit: Option<&str>,
+    ) -> Result<Vec<CandleOkxRespDto>, Error> {
+        println!("OKX inst_id: {}", inst_id);
         let mut path = format!("{}/history-candles?instId={}", API_MARKET_PATH, inst_id);
         
-        if let Some(b) = bar {
-            path.push_str(&format!("&bar={}", b));
-        }
+        path.push_str(&format!("&bar={}", bar));
         
         if let Some(a) = after {
             path.push_str(&format!("&after={}", a));
@@ -120,8 +118,10 @@ impl OkxMarket {
         if let Some(l) = limit {
             path.push_str(&format!("&limit={}", l));
         }
-        
-        self.client.send_request::<Vec<Candle>>(Method::GET, &path, "").await
+        println!("OKX path: {}", path);
+        let res: Result<Vec<Vec<String>>, Error> = self.client.send_request::<Vec<Vec<String>>>(Method::GET, &path, "").await;
+        let candles = res.unwrap().into_iter().map(|v| CandleOkxRespDto::from_vec(v)).collect();
+        Ok(candles)
     }
     
     /// 获取交易产品深度
@@ -148,7 +148,7 @@ impl OkxMarket {
         inst_type: &str,
         uly: Option<&str>,
         inst_id: Option<&str>,
-    ) -> Result<Vec<Instrument>, Error> {
+    ) -> Result<Vec<InstrumentOkxResDto>, Error> {
         let mut path = format!("{}/instruments?instType={}", API_MARKET_PATH, inst_type);
         
         if let Some(u) = uly {
@@ -159,7 +159,7 @@ impl OkxMarket {
             path.push_str(&format!("&instId={}", id));
         }
         
-        self.client.send_request::<Vec<Instrument>>(Method::GET, &path, "").await
+        self.client.send_request::<Vec<InstrumentOkxResDto>>(Method::GET, &path, "").await
     }
 }
 
@@ -178,7 +178,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_candles() {
         let market = OkxMarket::from_env().expect("无法从环境变量创建市场API");
-        let candles = market.get_candles("BTC-USDT", Some("1D"), None, None, Some(10)).await;
+        let candles = market.get_candles("BTC-USDT", "1D", None, None, Some("10")).await;
         
         println!("Candles result: {:?}", candles);
     }

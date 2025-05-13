@@ -1,1 +1,1 @@
-pub mod trade_model;
+pub mod trade_dto;

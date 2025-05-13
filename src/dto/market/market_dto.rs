@@ -1,61 +1,75 @@
 use serde::{Deserialize, Serialize};
 
-/// 行情数据
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Ticker {
-    /// 产品ID
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct TickerOkxResDto {
+    #[serde(rename = "instType")]
+    pub inst_type: String,
     #[serde(rename = "instId")]
     pub inst_id: String,
-    /// 最新成交价
     pub last: String,
-    /// 最新成交的数量
     #[serde(rename = "lastSz")]
-    pub last_size: String,
-    /// 买一价
-    #[serde(rename = "bidPx")]
-    pub bid_price: String,
-    /// 买一价的挂单数数量
-    #[serde(rename = "bidSz")]
-    pub bid_size: String,
-    /// 卖一价
+    pub last_sz: String,
     #[serde(rename = "askPx")]
-    pub ask_price: String,
-    /// 卖一价的挂单数量
+    pub ask_px: String,
     #[serde(rename = "askSz")]
-    pub ask_size: String,
-    /// 24小时开盘价
+    pub ask_sz: String,
+    #[serde(rename = "bidPx")]
+    pub bid_px: String,
+    #[serde(rename = "bidSz")]
+    pub bid_sz: String,
     pub open24h: String,
-    /// 24小时最高价
     pub high24h: String,
-    /// 24小时最低价
     pub low24h: String,
-    /// 持仓量
     #[serde(rename = "volCcy24h")]
-    pub volume_currency_24h: String,
-    /// 成交量
+    pub vol_ccy24h: String,
     pub vol24h: String,
-    /// 时间戳
+    #[serde(rename = "sodUtc0")]
+    pub sod_utc0: String,
+    #[serde(rename = "sodUtc8")]
+    pub sod_utc8: String,
     pub ts: String,
 }
 
 /// K线数据
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Candle {
+pub struct CandleOkxRespDto {
     /// 开盘时间
     pub ts: String,
     /// 开盘价格
-    pub open: String,
+    pub o: String,
     /// 最高价格
-    pub high: String,
+    pub h: String,
     /// 最低价格
-    pub low: String,
+    pub l: String,
     /// 收盘价格
-    pub close: String,
+    pub c: String,
     /// 成交量
-    pub vol: String,
+    pub v: String,
     /// 成交量，以货币计量
-    #[serde(rename = "volCcy")]
-    pub vol_currency: String,
+    pub vol_ccy: String,
+    /// 成交量，以货币计量
+    pub vol_ccy_quote: String,
+    /// 是否已确认
+    pub confirm: String,
+}
+
+impl CandleOkxRespDto {
+    pub fn from_vec(v: Vec<String>) -> Self {
+        // 这里请根据你的结构体字段实际情况进行赋值
+        // 例如：
+        Self {
+            ts: v[0].clone(),
+            o: v[1].clone(),
+            h: v[2].clone(),
+            l: v[3].clone(),
+            c: v[4].clone(),
+            v: v[5].clone(),
+            vol_ccy: v[6].clone(),
+            vol_ccy_quote: v[7].clone(),
+            confirm: v[8].clone(),
+        }
+    }
 }
 
 /// 深度数据
@@ -74,7 +88,7 @@ pub struct Depth {
 
 /// 交易对详情
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Instrument {
+pub struct InstrumentOkxResDto {
     /// 产品类型
     #[serde(rename = "instType")]
     pub inst_type: String,
@@ -101,4 +115,4 @@ pub struct Instrument {
     pub min_size: String,
     /// 产品状态
     pub state: String,
-} 
+}

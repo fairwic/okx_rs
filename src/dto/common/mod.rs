@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use core::fmt::{Display, Formatter};
 
 /// 交易对信息
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -38,6 +39,13 @@ pub enum Side {
     Sell,
 }
 
+impl Display for Side {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_string())
+    }
+}
+
+
 /// 持仓方向枚举
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum PositionSide {
@@ -47,6 +55,16 @@ pub enum PositionSide {
     Short,
     #[serde(rename = "net")]
     Net,
+}
+
+impl Display for PositionSide {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PositionSide::Long => write!(f, "long"),
+            PositionSide::Short => write!(f, "short"),
+            PositionSide::Net => write!(f, "net"),
+        }
+    }
 }
 
 /// 订单类型枚举
