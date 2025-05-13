@@ -53,7 +53,7 @@ async fn main() -> Result<(), Error> {
     let client = create_client()?;
     
     // 获取BTC-USDT的行情
-    let ticker = MarketApi::get_ticker(&client, "BTC-USDT").await?;
+    let ticker = MarketApi::get_ticker(&client, "BTC-USDT-SWAP").await?;
     println!("BTC-USDT 行情: {:?}", ticker);
     
     // 获取账户余额
@@ -148,8 +148,8 @@ let credentials = Credentials::new(
 
 ```bash
 # 克隆仓库
-git clone https://github.com/yourusername/okx-sdk-rust.git
-cd okx-sdk-rust
+git clone https://github.com/fairwic/okx_rs.git
+cd okx_rs
 
 # 运行测试
 cargo test
