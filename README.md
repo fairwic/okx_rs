@@ -19,13 +19,13 @@
 
 ```toml
 [dependencies]
-okx = "0.1.0"
+okx = "0.1.3"
 ```
 
 或者直接从GitHub克隆:
 
 ```bash
-cargo add --git https://github.com/yourusername/okx-sdk-rust
+cargo add --git https://github.com/fairwic/okx_rs
 ```
 
 ## 快速开始
@@ -49,52 +49,58 @@ use okx::api::market::MarketApi;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    // 初始化客户端
-    let client = create_client()?;
-    
-    // 获取BTC-USDT的行情
-    let ticker = MarketApi::get_ticker(&client, "BTC-USDT-SWAP").await?;
+    env_logger::init();
+    let credentials = Credentials::from_env().unwrap();
+
+    let client: OkxClient = OkxClient::new(credentials).unwrap();
+
+    let market = OkxMarket::new(client.clone());
+    // 获取BTC-USDT的产品行情
+    let ticker = market.get_ticker("BTC-USDT-SWAP").await?;
     println!("BTC-USDT 行情: {:?}", ticker);
-    
-    // 获取账户余额
-    // let balances = okx::api::account::AccountApi::get_balance(&client, None).await?;
-    // println!("账户余额: {:?}", balances);
-    
     Ok(())
 }
+
+
+#[tokio::main]
+async fn main() -> Result<(), Error> {
+    env_logger::init();
+    let credentials = Credentials::new(
+    "your_api_key",
+    "your_api_secret",
+    "your_passphrase"
+    "is_simulated_trading",//是否模拟交易
+    ); // 初始化客户端
+    let client: OkxClient = OkxClient::new(credentials).unwrap();
+    //获取asset账户余额
+    let balances = OkxAsset::new(client).get_balances(None).await?;
+    println!("账户余额: {:?}", balances);
+
+    Ok(())
+}
+
+
 ```
 
 ### WebSocket API 示例
 
 ```rust
-use okx::websocket::{Args, ChannelType, WebsocketApi};
-use okx::config::init_env;
-
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // 初始化环境
-    init_env();
-    
-    // 创建WebSocket客户端
-    let mut ws_client = WebsocketApi::new_public();
-    
-    // 连接到WebSocket
-    let mut rx = ws_client.connect().await?;
-    
-    // 订阅BTC-USDT行情
-    let args = Args::new().with_inst_id("BTC-USDT");
-    ws_client.subscribe(ChannelType::Tickers, args).await?;
-    
-    // 处理接收到的消息
-    while let Some(msg) = rx.recv().await {
-        println!("收到消息: {}", serde_json::to_string_pretty(&msg)?);
-    }
-    
-    // 关闭连接
-    ws_client.close().await;
-    
+async fn main() -> Result<(), Error> {
+    env_logger::init();
+    let args = Args::new().with_inst_id("BTC-USDT".to_string());
+    let mut client = OkxWebsocketClient::new_public();
+    let mut rx = client.connect().await.unwrap();
+    client.subscribe(ChannelType::Tickers, args).await.unwrap();
+    tokio::spawn(async move {
+        while let Some(msg) = rx.recv().await {
+            println!("收到公共频道消息: {:?}", msg);
+        }
+    });
+    sleep(Duration::from_secs(100)).await;
     Ok(())
 }
+
 ```
 
 ## 项目结构
@@ -140,7 +146,8 @@ let config = Config::default()
 let credentials = Credentials::new(
     "your_api_key",
     "your_api_secret",
-    "your_passphrase"
+    "your_passphrase",
+    "0"//is_simulated_trading 0 || 1
 );
 ```
 
@@ -161,4 +168,4 @@ cargo run --example websocket
 
 ## 许可证
 
-MIT 
+MIT
