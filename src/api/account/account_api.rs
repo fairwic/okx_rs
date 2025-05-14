@@ -6,6 +6,7 @@ use crate::dto::account::account_dto::{AccountConfig, AccountRisk, Balance, Posi
 use reqwest::Method;
 use serde_json::json;
 use crate::dto::trade::trade_dto::PositionRespDto;
+use tokio_tungstenite::tungstenite::client;
 
 /// OKX账户API
 /// 提供账户相关的API访问
@@ -17,11 +18,9 @@ pub struct OkxAccount {
 
 impl OkxAccount {
     /// 创建一个新的OkxAccount实例，使用给定的客户端
-    pub fn new(credentials: Credentials) -> Self {
+    pub fn new(client: OkxClient) -> Self {
         Self {
-            // 创建客户端
-            client: OkxClient::new(credentials)
-                .unwrap(),
+            client: client
         }
     }
 
