@@ -17,6 +17,7 @@ pub enum WebSocketOperation {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WebSocketAuth {
     /// API密钥
+    #[serde(rename = "apiKey")]
     pub api_key: String,
     /// 签名
     pub sign: String,

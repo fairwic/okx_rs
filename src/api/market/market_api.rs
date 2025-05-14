@@ -119,8 +119,8 @@ impl OkxMarket {
             path.push_str(&format!("&limit={}", l));
         }
         println!("OKX path: {}", path);
-        let res: Result<Vec<Vec<String>>, Error> = self.client.send_request::<Vec<Vec<String>>>(Method::GET, &path, "").await;
-        let candles = res.unwrap().into_iter().map(|v| CandleOkxRespDto::from_vec(v)).collect();
+        let res: Vec<Vec<String>> = self.client.send_request::<Vec<Vec<String>>>(Method::GET, &path, "").await?;
+        let candles = res.into_iter().map(|v| CandleOkxRespDto::from_vec(v)).collect();
         Ok(candles)
     }
     

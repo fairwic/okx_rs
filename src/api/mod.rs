@@ -5,7 +5,6 @@ pub mod public_data;
 pub mod asset;
 pub mod big_data;
 pub mod websocket;
-pub mod examples;
 
 // 重新导出已移动的模块
 pub use websocket::OkxWebsocketApi;

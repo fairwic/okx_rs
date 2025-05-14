@@ -50,14 +50,14 @@ impl OkxAsset {
     ) -> Result<Vec<AssetBalance>, Error> {
         // 币种，如 BTC
         // 支持多币种查询（不超过20个），币种之间半角逗号分隔
-        let mut path = "/api/v5/asset/balances?".to_string();
+        let mut path = format!("{}/balances", API_ASSET_PATH);
         if !ccy.is_none() {
             let ccy_param = ccy.unwrap().join(",");
             if !ccy_param.is_empty() {
                 path.push_str(&format!("&ccy={}", ccy_param));
             }
         }
-        self.client.send_request(Method::GET, &path, "").await
+        self.client.send_request::<Vec<AssetBalance>>(Method::GET, &path, "").await
     }
     
     /// 获取资金划转状态

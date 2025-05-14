@@ -21,7 +21,7 @@ impl OkxContracts {
     pub fn new() -> Self {
         Self {
             // 创建客户端
-            client: OkxClient::new(Credentials::new("api_key", "api_secret", "passphrase"))
+            client: OkxClient::new(Credentials::new("api_key", "api_secret", "passphrase", "0"))
                 .unwrap(),
         }
     }

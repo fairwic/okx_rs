@@ -5,9 +5,6 @@ use std::fmt::{Display, Formatter};
 
 use crate::trading::okx::okx_client::OkxApiResponse;
 use anyhow::{anyhow, Result};
-use tracing::debug;
-use tracing::error;
-use tracing::field::debug;
 use crate::app_init;
 use crate::trading::order::swap_ordr::SwapOrder;
 #[derive(Serialize, Deserialize, Debug)]

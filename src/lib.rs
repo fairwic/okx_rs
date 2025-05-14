@@ -22,7 +22,6 @@ pub use api::{
     asset::OkxAsset,
     big_data::OkxBigData,
     websocket::OkxWebsocketApi,
-    examples,
 };
 pub use error::Error;
 pub use websocket::OkxWebsocketClient;

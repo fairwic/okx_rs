@@ -31,6 +31,13 @@ pub fn generate_timestamp() -> String {
         .to_string()
 }
 
+/// 秒级时间戳
+pub fn generate_timestamp_websocket() -> String {
+    chrono::Utc::now()
+        .timestamp()
+        .to_string()
+}
+
 /// 生成请求的截止时间戳（毫秒）
 pub fn generate_expiration_timestamp(expiration_ms: i64) -> i64 {
     chrono::Utc::now().timestamp_millis() + expiration_ms

@@ -1,12 +1,11 @@
 use reqwest::{Client, Method, StatusCode};
-use serde::{Deserialize, Serialize};
+use serde::{de, Deserialize, Serialize};
 use std::time::Duration;
 
 use crate::config::{Credentials, CONFIG};
 use crate::error::Error;
 use crate::utils;
-use tracing::{debug, info};
-
+use log::{debug, info};
 /// 通用的OKX API响应结构
 #[derive(Serialize, Deserialize, Debug)]
 pub struct OkxApiResponse<T> {
@@ -47,8 +46,8 @@ impl OkxClient {
             
         Ok(Self {
             client,
+            is_simulated_trading: credentials.is_simulated_trading.clone(),
             credentials,
-            is_simulated_trading: CONFIG.is_simulated_trading.clone(),
             base_url: CONFIG.api_url.clone(),
             request_expiration_ms: CONFIG.request_expiration_ms,
         })
@@ -83,13 +82,7 @@ impl OkxClient {
         path: &str,
         body: &str,
     ) -> Result<T, Error> {
-        info!("33333333333");
-        info!("OKX path: {}", path);
-        info!("OKX body: {}", body);
-        info!("OKX method: {}", method);
-
         let timestamp = utils::generate_timestamp();
-        info!("OKX timestamp: {}", timestamp);
         let signature = utils::generate_signature(
             &self.credentials.api_secret,
             &timestamp,
@@ -97,12 +90,12 @@ impl OkxClient {
             path,
             body,
         )?;
-        info!("OKX signature: {}", signature);
+        debug!("OKX signature: {}", signature);
         let exp_time = utils::generate_expiration_timestamp(self.request_expiration_ms);
-        
+
         let url = format!("{}{}", self.base_url, path);
         debug!("请求OKX API: {}", url);
-        
+
         let mut request_builder = self.client
             .request(method, &url)
             .header("OK-ACCESS-KEY", &self.credentials.api_key)
@@ -111,37 +104,29 @@ impl OkxClient {
             .header("OK-ACCESS-PASSPHRASE", &self.credentials.passphrase)
             .header("Content-Type", "application/json")
             .header("expTime", exp_time.to_string());
-            
         if self.is_simulated_trading == "1" {
             request_builder = request_builder.header("x-simulated-trading", "1");
         }
-       
-        info!("OKX body_string: {}", body.to_string());
+
+        debug!("OKX body_string: {}", body.to_string());
         let request_builder = request_builder.body(body.to_string());
-        
         let response = request_builder.send().await.map_err(Error::HttpError)?;
-        
         let status_code = response.status();
         let response_body = response.text().await.map_err(Error::HttpError)?;
-        
         debug!("OKX API响应状态码: {}", status_code);
-        info!("OKX API响应: {}", response_body);
         if status_code == StatusCode::OK {
             let result: OkxApiResponse<T> = serde_json::from_str(&response_body)
                 .map_err(|e| Error::JsonError(e))?;
-                
             if result.code != "0" {
                 return Err(Error::OkxApiError {
                     code: result.code,
                     message: result.msg,
                 });
             }
-            
             Ok(result.data)
         } else {
             let error: OkxApiErrorResponse = serde_json::from_str(&response_body)
                 .map_err(|e| Error::JsonError(e))?;
-                
             Err(Error::OkxApiError {
                 code: error.code,
                 message: error.msg,

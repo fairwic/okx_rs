@@ -1,9 +1,9 @@
 use reqwest::Method;
-use tracing::debug;
 
 use crate::client::{OkxClient, OkxApiResponse};
 use crate::Error;
 use crate::dto::big_data::*;
+use log::debug;
 
 pub struct OkxBigData {
     client: OkxClient,
