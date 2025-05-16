@@ -4,19 +4,26 @@ use crate::client::{OkxClient, OkxApiResponse};
 use crate::Error;
 use crate::dto::big_data::*;
 use log::debug;
+use crate::api::api_trait::OkxApi;
 
 pub struct OkxBigData {
     client: OkxClient,
 }
 
-impl OkxBigData {
-    pub fn new(client: OkxClient) -> Self {
+impl OkxApi for OkxBigData {
+    fn new(client: OkxClient) -> Self {
         OkxBigData { client }
     }
-    pub fn from_env() -> Result<Self,Error> {
+    fn from_env() -> Result<Self,Error> {
         let client = OkxClient::from_env()?;
         Ok(OkxBigData::new(client))
     }
+    fn client(&self) -> &OkxClient {
+        &self.client
+    }
+}
+
+impl OkxBigData {
     //获取交易大数据支持币种
     pub async fn get_support_coin(&self) -> Result<OkxApiResponse<SupportCoin>,Error> {
         // 币种，如 BTC

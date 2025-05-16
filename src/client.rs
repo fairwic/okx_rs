@@ -115,6 +115,7 @@ impl OkxClient {
         let response_body = response.text().await.map_err(Error::HttpError)?;
         debug!("OKX API响应状态码: {}", status_code);
         if status_code == StatusCode::OK {
+            println!("OKX API响应: {}", response_body);
             let result: OkxApiResponse<T> = serde_json::from_str(&response_body)
                 .map_err(|e| Error::JsonError(e))?;
             if result.code != "0" {

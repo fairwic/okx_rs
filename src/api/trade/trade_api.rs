@@ -4,6 +4,7 @@ use crate::dto::trade::trade_dto::{FeeRate, Order, OrderReqDto, OrderResData};
 use reqwest::Method;
 use serde_json::json;
 use crate::api::API_TRADE_PATH;
+use crate::api::api_trait::OkxApi;
 
 /// OKX交易API
 /// 提供交易相关的API访问
@@ -13,23 +14,20 @@ pub struct OkxTrade {
     client: OkxClient,
 }
 
-impl OkxTrade {
-    /// 创建一个新的OkxTrade实例
-    pub fn new(client: OkxClient) -> Self {
-        Self { client }
+impl OkxApi for OkxTrade {
+    fn new(client: OkxClient) -> Self {
+        OkxTrade { client }
     }
-    
-    /// 从环境变量创建一个新的OkxTrade实例
-    pub fn from_env() -> Result<Self, Error> {
+    fn from_env() -> Result<Self,Error> {
         let client = OkxClient::from_env()?;
-        Ok(Self { client })
+        Ok(OkxTrade::new(client))
     }
-    
-    /// 获取内部客户端引用
-    pub fn client(&self) -> &OkxClient {
+    fn client(&self) -> &OkxClient {
         &self.client
     }
+}
 
+impl OkxTrade {
     /// 下单
     pub async fn place_order(
         &self,

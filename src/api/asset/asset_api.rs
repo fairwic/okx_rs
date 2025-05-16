@@ -13,23 +13,20 @@ pub struct OkxAsset {
     client: OkxClient,
 }
 
-impl OkxAsset {
-    /// 创建一个新的OkxAsset实例
-    pub fn new(client: OkxClient) -> Self {
-        Self { client }
+impl OkxApi for OkxAsset {
+    fn new(client: OkxClient) -> Self {
+        OkxAsset { client }
     }
-    
-    /// 从环境变量创建一个新的OkxAsset实例
-    pub fn from_env() -> Result<Self, Error> {
+    fn from_env() -> Result<Self,Error> {
         let client = OkxClient::from_env()?;
-        Ok(Self { client })
+        Ok(OkxAsset::new(client))
     }
-    
-    /// 获取内部客户端引用
-    pub fn client(&self) -> &OkxClient {
+    fn client(&self) -> &OkxClient {
         &self.client
     }
+}
 
+impl OkxAsset {
     // /// 获取资产余额
     // pub async fn get_balances(
     //     &self,

@@ -1,9 +1,10 @@
 use crate::client::OkxClient;
 use crate::error::Error;
-use crate::dto::public_data::public_data_dto::{SystemTime, SystemStatus, EconomicEvent, RateLimit};
+use crate::dto::public_data::public_data_dto::{SystemTime, SystemStatus, EconomicEventOkxRespDto, RateLimit};
 use crate::dto::market::market_dto::InstrumentOkxResDto;
 use crate::api::API_PUBLIC_PATH;
 use reqwest::Method;
+use crate::api::api_trait::OkxApi;
 
 /// OKX公共数据API
 /// 提供公共数据相关的API访问
@@ -13,23 +14,20 @@ pub struct OkxPublicData {
     client: OkxClient,
 }
 
-impl OkxPublicData {
-    /// 创建一个新的OkxPublicData实例
-    pub fn new(client: OkxClient) -> Self {
-        Self { client }
+impl OkxApi for OkxPublicData {
+    fn new(client: OkxClient) -> Self {
+        OkxPublicData { client }
     }
-    
-    /// 从环境变量创建一个新的OkxPublicData实例
-    pub fn from_env() -> Result<Self, Error> {
+    fn from_env() -> Result<Self,Error> {
         let client = OkxClient::from_env()?;
-        Ok(Self { client })
+        Ok(OkxPublicData::new(client))
     }
-    
-    /// 获取内部客户端引用
-    pub fn client(&self) -> &OkxClient {
+    fn client(&self) -> &OkxClient {
         &self.client
     }
+}
 
+impl OkxPublicData {
     /// 获取系统时间
     pub async fn get_time() -> Result<String, Error> {
         let url = format!("{}/time", API_PUBLIC_PATH);
@@ -99,7 +97,7 @@ impl OkxPublicData {
         before: Option<i64>,
         after: Option<i64>,
         limit: Option<i64>,
-    ) -> Result<Vec<EconomicEvent>, Error> {
+    ) -> Result<Vec<EconomicEventOkxRespDto>, Error> {
         let mut path = format!("{}/economic-calendar", API_PUBLIC_PATH);
         let mut query_params = vec![];
         
@@ -127,7 +125,7 @@ impl OkxPublicData {
             path.push_str(&format!("?{}", query_params.join("&")));
         }
         
-        self.client.send_request::<Vec<EconomicEvent>>(Method::GET, &path, "").await
+        self.client.send_request::<Vec<EconomicEventOkxRespDto>>(Method::GET, &path, "").await
     }
     
     ///, 获取API速率限制
@@ -161,4 +159,11 @@ mod tests {
         let instruments = public_data.get_instruments("SPOT", None, None, None).await;
         println!("交易产品列表: {:?}", instruments);
     }
-} 
+    #[tokio::test]
+    async fn test_get_economic_calendar() {
+        env_logger::init();
+        let public_data = OkxPublicData::from_env().expect("无法从环境变量创建公共数据API");
+        let economic_calendar = public_data.get_economic_calendar(None, Some("3"), None, None, None).await;
+        println!("经济日历数据: {:?}", economic_calendar);
+    }
+}

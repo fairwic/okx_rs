@@ -167,7 +167,8 @@ impl Credentials {
 
         let is_simulated_trading = env::var("OKX_SIMULATED_TRADING")
             .map_err(|_| Error::ConfigError("缺少环境变量: OKX_SIMULATED_TRADING".to_string()))?;
-
+        println!("is_simulated_trading: {}", is_simulated_trading);
+        println!("api_key: {}", api_key);
         Ok(Self::new(
             api_key,
             api_secret,

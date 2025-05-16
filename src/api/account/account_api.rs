@@ -7,6 +7,7 @@ use reqwest::Method;
 use serde_json::json;
 use crate::dto::trade::trade_dto::PositionRespDto;
 use tokio_tungstenite::tungstenite::client;
+use crate::api::api_trait::OkxApi;
 
 /// OKX账户API
 /// 提供账户相关的API访问
@@ -16,25 +17,20 @@ pub struct OkxAccount {
     client: OkxClient,
 }
 
-impl OkxAccount {
-    /// 创建一个新的OkxAccount实例，使用给定的客户端
-    pub fn new(client: OkxClient) -> Self {
-        Self {
-            client: client
-        }
+impl OkxApi for OkxAccount {
+    fn new(client: OkxClient) -> Self {
+        OkxAccount { client }
     }
-
-    /// 从环境变量创建一个新的OkxAccount实例
-    pub fn from_env() -> Result<Self, Error> {
+    fn from_env() -> Result<Self,Error> {
         let client = OkxClient::from_env()?;
-        Ok(Self { client })
+        Ok(OkxAccount::new(client))
     }
-
-    /// 获取内部客户端引用
-    pub fn client(&self) -> &OkxClient {
+    fn client(&self) -> &OkxClient {
         &self.client
     }
+}
 
+impl OkxAccount {
     /// 查询账户余额
     pub async fn get_balance(&self, ccy: Option<&str>) -> Result<Vec<Balance>, Error> {
         let mut path = format!("{}/balance", API_ACCOUNT_PATH);
