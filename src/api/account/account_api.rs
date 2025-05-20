@@ -7,7 +7,7 @@ use reqwest::Method;
 use serde_json::json;
 use crate::dto::trade::trade_dto::PositionRespDto;
 use tokio_tungstenite::tungstenite::client;
-use crate::api::api_trait::OkxApi;
+use crate::api::api_trait::OkxApiTrait;
 
 /// OKX账户API
 /// 提供账户相关的API访问
@@ -17,7 +17,7 @@ pub struct OkxAccount {
     client: OkxClient,
 }
 
-impl OkxApi for OkxAccount {
+impl OkxApiTrait for OkxAccount {
     fn new(client: OkxClient) -> Self {
         OkxAccount { client }
     }

@@ -4,7 +4,7 @@ use crate::dto::trade::trade_dto::{FeeRate, Order, OrderReqDto, OrderResData};
 use reqwest::Method;
 use serde_json::json;
 use crate::api::API_TRADE_PATH;
-use crate::api::api_trait::OkxApi;
+use crate::api::api_trait::OkxApiTrait;
 
 /// OKX交易API
 /// 提供交易相关的API访问
@@ -14,7 +14,7 @@ pub struct OkxTrade {
     client: OkxClient,
 }
 
-impl OkxApi for OkxTrade {
+impl OkxApiTrait for OkxTrade {
     fn new(client: OkxClient) -> Self {
         OkxTrade { client }
     }

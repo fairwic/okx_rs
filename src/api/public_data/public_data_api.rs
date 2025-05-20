@@ -4,7 +4,7 @@ use crate::dto::public_data::public_data_dto::{SystemTime, SystemStatus, Economi
 use crate::dto::market::market_dto::InstrumentOkxResDto;
 use crate::api::API_PUBLIC_PATH;
 use reqwest::Method;
-use crate::api::api_trait::OkxApi;
+use crate::api::api_trait::OkxApiTrait;
 
 /// OKX公共数据API
 /// 提供公共数据相关的API访问
@@ -14,7 +14,7 @@ pub struct OkxPublicData {
     client: OkxClient,
 }
 
-impl OkxApi for OkxPublicData {
+impl OkxApiTrait for OkxPublicData {
     fn new(client: OkxClient) -> Self {
         OkxPublicData { client }
     }

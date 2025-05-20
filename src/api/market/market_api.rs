@@ -1,4 +1,4 @@
-use crate::api::api_trait::OkxApi;
+use crate::api::api_trait::OkxApiTrait;
 use crate::api::API_MARKET_PATH;
 use crate::client::OkxClient;
 use crate::dto::market::market_dto::{
@@ -15,7 +15,7 @@ pub struct OkxMarket {
     client: OkxClient,
 }
 
-impl OkxApi for OkxMarket {
+impl OkxApiTrait for OkxMarket {
     /// 创建一个新的OkxMarket实例
     fn new(client: OkxClient) -> Self {
         Self { client }

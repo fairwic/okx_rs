@@ -8,6 +8,7 @@ pub mod api;
 pub mod utils;
 pub mod config;
 pub mod websocket;
+pub mod enums;
 
 /// OKX SDK的版本
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

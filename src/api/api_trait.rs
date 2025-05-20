@@ -1,7 +1,7 @@
 use crate::client::OkxClient;
 use crate::error::Error;
 
-pub trait OkxApi {
+pub trait OkxApiTrait {
     fn new(client: OkxClient) -> Self;
     fn from_env() -> Result<Self, Error> where Self: Sized;
     fn client(&self) -> &OkxClient;

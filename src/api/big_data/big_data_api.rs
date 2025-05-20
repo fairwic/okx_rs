@@ -4,13 +4,13 @@ use crate::client::{OkxClient, OkxApiResponse};
 use crate::Error;
 use crate::dto::big_data::*;
 use log::debug;
-use crate::api::api_trait::OkxApi;
+use crate::api::api_trait::OkxApiTrait;
 
 pub struct OkxBigData {
     client: OkxClient,
 }
 
-impl OkxApi for OkxBigData {
+impl OkxApiTrait for OkxBigData {
     fn new(client: OkxClient) -> Self {
         OkxBigData { client }
     }
