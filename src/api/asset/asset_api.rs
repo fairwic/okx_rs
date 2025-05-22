@@ -49,7 +49,7 @@ impl OkxAsset {
     ) -> Result<Vec<AssetBalance>, Error> {
         // 币种，如 BTC
         // 支持多币种查询（不超过20个），币种之间半角逗号分隔
-        let mut path = format!("{}/balances", API_ASSET_PATH);
+        let mut path = format!("{}/balances?", API_ASSET_PATH);
         if !ccy.is_none() {
             let ccy_param = ccy.unwrap().join(",");
             if !ccy_param.is_empty() {
@@ -239,7 +239,7 @@ impl OkxAsset {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::enums::enums_basic::AccountType;
+    use crate::enums::account_enums::AccountType;
     #[tokio::test]
     async fn test_get_balances() {
         let asset = OkxAsset::from_env().expect("无法从环境变量创建资产API");

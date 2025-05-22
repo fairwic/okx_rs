@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::enums::enums_basic::AccountType;
+use crate::enums::account_enums::AccountType;
 
 /// 资产余额信息
 #[derive(Debug, Clone, Serialize, Deserialize)]

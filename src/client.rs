@@ -5,7 +5,7 @@ use std::time::Duration;
 use crate::config::{Credentials, CONFIG};
 use crate::error::Error;
 use crate::utils;
-use log::{debug, info};
+use log::{debug, error, info};
 /// 通用的OKX API响应结构
 #[derive(Serialize, Deserialize, Debug)]
 pub struct OkxApiResponse<T> {
@@ -43,7 +43,7 @@ impl OkxClient {
             .timeout(Duration::from_millis(CONFIG.api_timeout_ms))
             .build()
             .map_err(Error::HttpError)?;
-            
+
         Ok(Self {
             client,
             is_simulated_trading: credentials.is_simulated_trading.clone(),
@@ -52,29 +52,29 @@ impl OkxClient {
             request_expiration_ms: CONFIG.request_expiration_ms,
         })
     }
-    
+
     /// 从环境变量创建OKX客户端
     pub fn from_env() -> Result<Self, Error> {
         let credentials = Credentials::from_env()?;
         info!("OKX credentials: {:?}", credentials);
         Self::new(credentials)
     }
-    
+
     /// 设置是否使用模拟交易
     pub fn set_simulated_trading(&mut self, is_simulated: String) {
         self.is_simulated_trading = is_simulated;
     }
-    
+
     /// 设置API基础URL
     pub fn set_base_url(&mut self, base_url: impl Into<String>) {
         self.base_url = base_url.into();
     }
-    
+
     /// 设置请求有效期
     pub fn set_request_expiration(&mut self, expiration_ms: i64) {
         self.request_expiration_ms = expiration_ms;
     }
-    
+
     /// 发送API请求并返回反序列化的响应
     pub async fn send_request<T: for<'a> Deserialize<'a>>(
         &self,
@@ -96,7 +96,8 @@ impl OkxClient {
         let url = format!("{}{}", self.base_url, path);
         debug!("请求OKX API: {}", url);
 
-        let mut request_builder = self.client
+        let mut request_builder = self
+            .client
             .request(method, &url)
             .header("OK-ACCESS-KEY", &self.credentials.api_key)
             .header("OK-ACCESS-SIGN", signature)
@@ -114,24 +115,34 @@ impl OkxClient {
         let status_code = response.status();
         let response_body = response.text().await.map_err(Error::HttpError)?;
         debug!("OKX API响应状态码: {}", status_code);
-        if status_code == StatusCode::OK {
-            println!("OKX API响应: {}", response_body);
-            let result: OkxApiResponse<T> = serde_json::from_str(&response_body)
-                .map_err(|e| Error::JsonError(e))?;
-            if result.code != "0" {
-                return Err(Error::OkxApiError {
-                    code: result.code,
-                    message: result.msg,
-                });
+
+        match status_code {
+            StatusCode::OK => {
+                println!("OKX API响应: {}", response_body);
+                let result: OkxApiResponse<T> =
+                    serde_json::from_str(&response_body).map_err(|e| Error::JsonError(e))?;
+                if result.code != "0" {
+                    return Err(Error::OkxApiError {
+                        code: result.code,
+                        message: result.msg,
+                    });
+                }
+                Ok(result.data)
             }
-            Ok(result.data)
-        } else {
-            let error: OkxApiErrorResponse = serde_json::from_str(&response_body)
-                .map_err(|e| Error::JsonError(e))?;
-            Err(Error::OkxApiError {
-                code: error.code,
-                message: error.msg,
-            })
+            StatusCode::NOT_FOUND => {
+                error!("OKX API错误响应: {}", response_body);
+                Err(Error::OkxApiError {
+                    code: "404".to_string(),
+                    message: "API not found".to_string(),
+                })
+            }
+            _ => {
+                error!("OKX API错误响应: {}", response_body);
+                Err(Error::OkxApiError {
+                    code: status_code.to_string(),
+                    message: response_body,
+                })
+            }
         }
     }
 }
