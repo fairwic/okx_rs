@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::dto::common::MarginMode;
+use serde::{Deserialize, Serialize};
 
 /// 平仓策略委托订单结构体
 #[derive(Serialize, Deserialize, Debug)]
@@ -58,28 +58,295 @@ pub struct TradingSwapNumResponseData {
     pub max_sell: String, //最大卖出可用数量
 }
 /// 账户余额信息
+/// uTime	String	账户信息的更新时间，Unix时间戳的毫秒数格式，如 1597026383085
+/// totalEq	String	美金层面权益
+/// isoEq	String	美金层面逐仓仓位权益
+/// 适用于合约模式/跨币种保证金模式/组合保证金模式
+/// adjEq	String	美金层面有效保证金
+/// 适用于现货模式/跨币种保证金模式/组合保证金模式
+/// availEq	String	账户美金层面可用保证金，排除因总质押借币上限而被限制的币种
+/// 适用于跨币种保证金模式/组合保证金模式
+/// ordFroz	String	美金层面全仓挂单占用保证金
+/// 仅适用于现货模式/跨币种保证金模式/组合保证金模式
+/// imr	String	美金层面占用保证金
+/// 适用于现货模式/跨币种保证金模式/组合保证金模式
+/// mmr	String	美金层面维持保证金
+/// 适用于现货模式/跨币种保证金模式/组合保证金模式
+/// borrowFroz	String	账户美金层面潜在借币占用保证金
+/// 仅适用于现货模式/跨币种保证金模式/组合保证金模式。在其他账户模式下为""。
+/// mgnRatio	String	美金层面维持保证金率
+/// 适用于现货模式/跨币种保证金模式/组合保证金模式
+/// notionalUsd	String	以美金价值为单位的持仓数量，即仓位美金价值
+/// 适用于现货模式/跨币种保证金模式/组合保证金模式
+/// notionalUsdForBorrow	String	借币金额（美元价值）
+/// 适用于现货模式/跨币种保证金模式/组合保证金模式
+/// notionalUsdForSwap	String	永续合约持仓美元价值
+/// 适用于跨币种保证金模式/组合保证金模式
+/// notionalUsdForFutures	String	交割合约持仓美元价值
+/// 适用于跨币种保证金模式/组合保证金模式
+/// notionalUsdForOption	String	期权持仓美元价值
+/// 适用于现货模式/跨币种保证金模式/组合保证金模式
+/// upl	String	账户层面全仓未实现盈亏（美元单位）
+/// 适用于跨币种保证金模式/组合保证金模式
+/// details	Array of objects	各币种资产详细信息
+/// ccy	String	币种
+/// eq	String	币种总权益
+/// cashBal	String	币种余额
+/// uTime	String	币种余额信息的更新时间，Unix时间戳的毫秒数格式，如 1597026383085
+/// isoEq	String	币种逐仓仓位权益
+/// 适用于合约模式/跨币种保证金模式/组合保证金模式
+/// availEq	String	可用保证金
+/// 适用于合约模式/跨币种保证金模式/组合保证金模式
+/// disEq	String	美金层面币种折算权益
+/// 适用于现货模式(开通了借币功能)/跨币种保证金模式/组合保证金模式
+/// fixedBal	String	抄底宝、逃顶宝功能的币种冻结金额
+/// availBal	String	可用余额
+/// frozenBal	String	币种占用金额
+/// ordFrozen	String	挂单冻结数量
+/// 适用于现货模式/合约模式/跨币种保证金模式
+/// liab	String	币种负债额
+/// 值为正数，如 "21625.64"
+/// 适用于现货模式/跨币种保证金模式/组合保证金模式
+/// upl	String	未实现盈亏
+/// 适用于合约模式/跨币种保证金模式/组合保证金模式
+/// uplLiab	String	由于仓位未实现亏损导致的负债
+/// 适用于跨币种保证金模式/组合保证金模式
+/// crossLiab	String	币种全仓负债额
+/// 适用于现货模式/跨币种保证金模式/组合保证金模式
+/// isoLiab	String	币种逐仓负债额
+/// 适用于跨币种保证金模式/组合保证金模式
+/// rewardBal	String	体验金余额
+/// mgnRatio	String	币种全仓维持保证金率，衡量账户内某项资产风险的指标
+/// 适用于合约模式且有全仓仓位时
+/// imr	String	币种维度全仓占用保证金
+/// 适用于合约模式且有全仓仓位时
+/// mmr	String	币种维度全仓维持保证金
+/// 适用于合约模式且有全仓仓位时
+/// interest	String	计息，应扣未扣利息
+/// 值为正数，如 9.01
+/// 适用于现货模式/跨币种保证金模式/组合保证金模式
+/// twap	String	当前负债币种触发系统自动换币的风险
+/// 0、1、2、3、4、5其中之一，数字越大代表您的负债币种触发自动换币概率越高
+/// 适用于现货模式/跨币种保证金模式/组合保证金模式
+/// maxLoan	String	币种最大可借
+/// 适用于现货模式/跨币种保证金模式/组合保证金模式 的全仓
+/// eqUsd	String	币种权益美金价值
+/// borrowFroz	String	币种美金层面潜在借币占用保证金
+/// 仅适用于现货模式/跨币种保证金模式/组合保证金模式。在其他账户模式下为""。
+/// notionalLever	String	币种杠杆倍数
+/// 适用于合约模式
+/// stgyEq	String	策略权益
+/// isoUpl	String	逐仓未实现盈亏
+/// 适用于合约模式/跨币种保证金模式/组合保证金模式
+/// spotInUseAmt	String	现货对冲占用数量
+/// 适用于组合保证金模式
+/// clSpotInUseAmt	String	用户自定义现货占用数量
+/// 适用于组合保证金模式
+/// maxSpotInUse	String	系统计算得到的最大可能现货占用数量
+/// 适用于组合保证金模式
+/// spotIsoBal	String	现货逐仓余额
+/// 仅适用于现货带单/跟单
+/// 适用于现货模式/合约模式
+/// smtSyncEq	String	合约智能跟单权益
+/// 默认为0，仅适用于跟单人。
+/// spotCopyTradingEq	String	现货智能跟单权益
+/// 默认为0，仅适用于跟单人。
+/// spotBal	String	现货余额 ，单位为 币种，比如 BTC。详情
+/// openAvgPx	String	现货开仓成本价 单位 USD。 详情
+/// accAvgPx	String	现货累计成本价 单位 USD。 详情
+/// spotUpl	String	现货未实现收益，单位 USD。 详情
+/// spotUplRatio	String	现货未实现收益率。详情
+/// totalPnl	String	现货累计收益，单位 USD。 详情
+/// totalPnlRatio	String	现货累计收益率。详情
+/// collateralEnabled	Boolean	true：质押币
+/// false：非质押币
+/// 适用于跨币种保证金模式
+/// collateralRestrict	Boolean	平台维度的质押借币限制
+/// true
+/// false
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Balance {
+    /// 账户信息的更新时间，Unix时间戳的毫秒数格式，如 1597026383085
+    #[serde(rename = "uTime")]
+    pub u_time: String,
+    /// 美金层面权益
+    #[serde(rename = "totalEq")]
+    pub total_eq: String,
+    /// 美金层面逐仓仓位权益
+    #[serde(rename = "isoEq")]
+    pub iso_eq: String,
+    /// 美金层面有效保证金
+    #[serde(rename = "adjEq")]
+    pub adj_eq: String,
+    /// 账户美金层面可用保证金，排除因总质押借币上限而被限制的币种
+    #[serde(rename = "availEq")]
+    pub avail_eq: String,
+    /// 美金层面全仓挂单占用保证金
+    #[serde(rename = "ordFroz")]
+    pub ord_froz: String,
+    /// 美金层面占用保证金
+    #[serde(rename = "imr")]
+    pub imr: String,
+    /// 美金层面维持保证金
+    #[serde(rename = "mmr")]
+    pub mmr: String,
+    /// 美金层面潜在借币占用保证金
+    #[serde(rename = "borrowFroz")]
+    pub borrow_froz: String,
+    /// 美金层面维持保证金率
+    #[serde(rename = "mgnRatio")]
+    pub mgn_ratio: String,
+    /// 以美金价值为单位的持仓数量，即仓位美金价值
+    #[serde(rename = "notionalUsd")]
+    pub notional_usd: String,
+    /// 借币金额（美元价值）
+    #[serde(rename = "notionalUsdForBorrow")]
+    pub notional_usd_for_borrow: String,
+    /// 永续合约持仓美元价值
+    #[serde(rename = "notionalUsdForSwap")]
+    pub notional_usd_for_swap: String,
+    /// 交割合约持仓美元价值
+    #[serde(rename = "notionalUsdForFutures")]
+    pub notional_usd_for_futures: String,
+    /// 期权持仓美元价值
+    #[serde(rename = "notionalUsdForOption")]
+    pub notional_usd_for_option: String,
+    /// 账户层面全仓未实现盈亏（美元单位）
+    #[serde(rename = "upl")]
+    pub upl: String,
+    /// 各币种资产详细信息
+    pub details: Vec<BalanceDetail>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BalanceDetail {
     /// 币种
     pub ccy: String,
-    /// 币种总额
-    #[serde(rename = "bal")]
-    pub balance: String,
+    /// 币种总权益
+    pub eq: String,
+    /// 币种余额
+    #[serde(rename = "cashBal")]
+    pub cash_bal: String,
+    /// 币种逐仓仓位权益
+    #[serde(rename = "isoEq")]
+    pub iso_eq: String,
+    /// 可用保证金
+    #[serde(rename = "availEq")]
+    pub avail_eq: String,
+    /// 美金层面币种折算权益
+    #[serde(rename = "disEq")]
+    pub dis_eq: String,
+    /// 抄底宝、逃顶宝功能的币种冻结金额
+    #[serde(rename = "fixedBal")]
+    pub fixed_bal: String,
     /// 可用余额
     #[serde(rename = "availBal")]
-    pub available_balance: String,
-    /// 冻结余额
+    pub avail_bal: String,
+    /// 币种占用金额
     #[serde(rename = "frozenBal")]
-    pub frozen_balance: String,
+    pub frozen_bal: String,
+    /// 挂单冻结数量
+    #[serde(rename = "ordFrozen")]
+    pub ord_frozen: String,
     /// 币种负债额
-    #[serde(rename = "liab", skip_serializing_if = "Option::is_none")]
-    pub liability: Option<String>,
-    /// 币种当前可用保证金
-    #[serde(rename = "availEq", skip_serializing_if = "Option::is_none")]
-    pub available_equity: Option<String>,
-    /// 币种风险价值
-    #[serde(rename = "upl", skip_serializing_if = "Option::is_none")]
-    pub unrealized_pl: Option<String>,
+    #[serde(rename = "liab")]
+    pub liab: String,
+    /// 未实现盈亏
+    #[serde(rename = "upl")]
+    pub upl: String,
+    /// 由于仓位未实现亏损导致的负债
+    #[serde(rename = "uplLiab")]
+    pub upl_liab: String,
+    /// 币种全仓负债额  
+    #[serde(rename = "crossLiab")]
+    pub cross_liab: String,
+    /// 币种逐仓负债额
+    #[serde(rename = "isoLiab")]
+    pub iso_liab: String,
+    /// 体验金余额
+    #[serde(rename = "rewardBal")]
+    pub reward_bal: String,
+    /// 币种全仓维持保证金率
+    #[serde(rename = "mgnRatio")]
+    pub mgn_ratio: String,
+    /// 币种维度全仓占用保证金
+    #[serde(rename = "imr")]
+    pub imr: String,
+    /// 币种维度全仓维持保证金
+    #[serde(rename = "mmr")]
+    pub mmr: String,
+    /// 计息，应扣未扣利息
+    #[serde(rename = "interest")]
+    pub interest: String,
+    /// 当前负债币种触发系统自动换币的风险
+    #[serde(rename = "twap")]
+    pub twap: String,
+    /// 币种最大可借
+    #[serde(rename = "maxLoan")]
+    pub max_loan: String,
+    /// 币种权益美金价值
+    #[serde(rename = "eqUsd")]
+    pub eq_usd: String,
+    /// 币种美金层面潜在借币占用保证金
+    #[serde(rename = "borrowFroz")]
+    pub borrow_froz: String,
+    /// 币种杠杆倍数
+    #[serde(rename = "notionalLever")]
+    pub notional_lever: String,
+    /// 策略权益
+    #[serde(rename = "stgyEq")]
+    pub stgy_eq: String,
+    /// 逐仓未实现盈亏
+    #[serde(rename = "isoUpl")]
+    pub iso_upl: String,
+    /// 现货对冲占用数量
+    #[serde(rename = "spotInUseAmt")]
+    pub spot_in_use_amt: String,
+    /// 用户自定义现货占用数量
+    #[serde(rename = "clSpotInUseAmt")]
+    pub cl_spot_in_use_amt: String,
+    /// 系统计算得到的最大可能现货占用数量
+    #[serde(rename = "maxSpotInUse")]
+    pub max_spot_in_use: String,
+    /// 现货逐仓余额
+    #[serde(rename = "spotIsoBal")]
+    pub spot_iso_bal: String,
+    /// 合约智能跟单权益
+    #[serde(rename = "smtSyncEq")]
+    pub smt_sync_eq: String,
+    /// 现货智能跟单权益
+    #[serde(rename = "spotCopyTradingEq")]
+    pub spot_copy_trading_eq: String,
+    /// 现货余额
+    #[serde(rename = "spotBal")]
+    pub spot_bal: String,
+    /// 现货开仓成本价
+    #[serde(rename = "openAvgPx")]
+    pub open_avg_px: String,
+    /// 现货累计成本价
+    #[serde(rename = "accAvgPx")]
+    pub acc_avg_px: String,
+    /// 现货未实现收益
+    #[serde(rename = "spotUpl")]
+    pub spot_upl: String,
+    /// 现货未实现收益率
+    #[serde(rename = "spotUplRatio")]
+    pub spot_upl_ratio: String,
+    /// 现货累计收益
+    #[serde(rename = "totalPnl")]
+    pub total_pnl: String,
+    /// 现货累计收益率
+    #[serde(rename = "totalPnlRatio")]
+    pub total_pnl_ratio: String,
+    /// 质押币
+    #[serde(rename = "collateralEnabled")]
+    pub collateral_enabled: bool,
+    /// 质押风险
+    #[serde(rename = "collateralRisk")]
+    pub collateral_risk: String,
+    /// 质押风险率
+    #[serde(rename = "collateralRestrict")]
+    pub collateral_restrict: String,
 }
 
 /// 账户配置
@@ -113,7 +380,6 @@ pub struct AccountRisk {
     #[serde(rename = "totalEq")]
     pub total_equity: String,
 }
-
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
