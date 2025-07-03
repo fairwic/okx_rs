@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use core::fmt::{Display, Formatter};
+use serde::{Deserialize, Serialize};
 
 /// 交易对信息
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -38,13 +38,14 @@ pub enum Side {
     #[serde(rename = "sell")]
     Sell,
 }
-
 impl Display for Side {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.to_string())
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Side::Buy => write!(f, "buy"),
+            Side::Sell => write!(f, "sell"),
+        }
     }
 }
-
 
 /// 持仓方向枚举
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -133,4 +134,4 @@ pub struct PaginationInfo {
     /// 请求的数据条数
     #[serde(rename = "limit", skip_serializing_if = "Option::is_none")]
     pub limit: Option<String>,
-} 
+}
