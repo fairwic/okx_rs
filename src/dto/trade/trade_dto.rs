@@ -1,7 +1,6 @@
-use serde::{Deserialize, Serialize};
-use crate::dto::common::{OrderType, Side, PositionSide, MarginMode};
+use crate::dto::common::{MarginMode, OrderType, PositionSide, Side};
 use core::fmt::{Display, Formatter};
-
+use serde::{Deserialize, Serialize};
 
 pub enum TdModeEnum {
     /// 保证金模式：isolated：逐仓
@@ -25,11 +24,10 @@ impl Display for TdModeEnum {
         match self {
             TdModeEnum::ISOLATED => write!(f, "isolated"),
             TdModeEnum::CROSS => write!(f, "cross"),
-            TdModeEnum::CASH => write!(f, "cash")
+            TdModeEnum::CASH => write!(f, "cash"),
         }
     }
 }
-
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AttachAlgoOrdReqDto {
@@ -50,17 +48,18 @@ pub struct AttachAlgoOrdReqDto {
     /// limit: 限价单
     /// 默认为condition
     pub tp_ord_kind: Option<String>,
-    /// 止损触发价，如果填写此参数，必须填写 止损委托价
-    pub sl_trigger_px: Option<String>,
-    /// 止损委托价，如果填写此参数，必须填写 止损触发价
-    /// 委托价格为-1时，执行市价止损
-    pub sl_ord_px: Option<String>,
     /// 止盈触发价类型
     /// last：最新价格
     /// index：指数价格
     /// mark：标记价格
     /// 默认为last
     pub tp_trigger_px_type: Option<String>,
+
+    /// 止损触发价，如果填写此参数，必须填写 止损委托价
+    pub sl_trigger_px: Option<String>,
+    /// 止损委托价，如果填写此参数，必须填写 止损触发价
+    /// 委托价格为-1时，执行市价止损
+    pub sl_ord_px: Option<String>,
     /// 止损触发价类型
     /// last：最新价格
     /// index：指数价格
@@ -75,24 +74,30 @@ pub struct AttachAlgoOrdReqDto {
     pub amend_px_on_trigger_type: Option<i32>,
 }
 impl AttachAlgoOrdReqDto {
+    /// 创建止盈止损订单
+    /// tp_trigger_px: 止盈触发价
+    /// tp_ord_px: 止盈委托价
+    /// sl_trigger_px: 止损触发价
+    /// sl_ord_px: 止损委托价
+    /// sz: 数量
     pub fn new(
-        tp_trigger_px: String,
-        tp_ord_px: String,
-        sl_trigger_px: String,
-        sl_ord_px: String,
+        tp_trigger_px: Option<String>,
+        tp_ord_px: Option<String>,
+        sl_trigger_px: Option<String>,
+        sl_ord_px: Option<String>,
         sz: String,
     ) -> Self {
         Self {
             attach_algo_cl_ord_id: None,
-            tp_trigger_px: Some(tp_trigger_px),
-            tp_ord_px: Some(tp_ord_px),
+            tp_trigger_px: tp_trigger_px,
+            tp_ord_px: tp_ord_px,
             tp_ord_kind: Some(TpOrdKindEnum::CONDITION.to_string()),
-            sl_trigger_px: Some(sl_trigger_px),
-            sl_ord_px: Some(sl_ord_px),
+            sl_trigger_px: sl_trigger_px,
+            sl_ord_px: sl_ord_px,
             tp_trigger_px_type: Some("last".to_string()),
             sl_trigger_px_type: Some("last".to_string()),
             sz: Some(sz),
-            amend_px_on_trigger_type: Some(1),
+            amend_px_on_trigger_type: Some(0),
         }
     }
 }
@@ -331,11 +336,10 @@ pub enum TpOrdKindEnum {
     LIMIT,
 }
 
-
 /// 订单响应数据
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct OrderResData {
+pub struct OrderResDto {
     /// 订单ID
     pub ord_id: String,
     /// 客户自定义订单ID
@@ -349,7 +353,6 @@ pub struct OrderResData {
     /// 事件执行失败或成功时的msg
     pub s_msg: Option<String>,
 }
-
 
 /// 市价平仓请求参数结构体
 #[derive(Serialize, Deserialize, Debug)]
@@ -395,7 +398,6 @@ pub struct CloseOrderResDto {
     /// 字母（区分大小写）与数字的组合，可以是纯字母、纯数字，且长度在1-16位之间
     pub tag: Option<String>,
 }
-
 
 pub enum OrdTypeEnum {
     /// 限价单

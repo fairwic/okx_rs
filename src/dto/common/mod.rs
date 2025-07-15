@@ -48,6 +48,7 @@ impl Display for Side {
 }
 
 /// 持仓方向枚举
+///
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum PositionSide {
     #[serde(rename = "long")]
@@ -55,7 +56,7 @@ pub enum PositionSide {
     #[serde(rename = "short")]
     Short,
     #[serde(rename = "net")]
-    Net,
+    Net, //买卖模式（交割/永续/期权：pos为正代表开多，pos为负代表开空。币币杠杆时，pos均为正，posCcy为交易货币时，代表开多；posCcy为计价货币时，代表开空。
 }
 
 impl Display for PositionSide {

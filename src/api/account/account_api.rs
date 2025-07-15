@@ -1,13 +1,16 @@
+use crate::api::api_trait::OkxApiTrait;
 use crate::api::API_ACCOUNT_PATH;
 use crate::client::OkxClient;
 use crate::config::Credentials;
+use crate::dto::account::account_dto::{
+    AccountConfig, AccountRisk, Balance, Position, SetLeverageRequest, TradingSwapNumResponseData,
+};
+use crate::dto::trade::trade_dto::PositionRespDto;
 use crate::error::Error;
-use crate::dto::account::account_dto::{AccountConfig, AccountRisk, Balance, Position, SetLeverageRequest, TradingSwapNumResponseData};
 use reqwest::Method;
 use serde_json::json;
-use crate::dto::trade::trade_dto::PositionRespDto;
+use std::env;
 use tokio_tungstenite::tungstenite::client;
-use crate::api::api_trait::OkxApiTrait;
 
 /// OKX账户API
 /// 提供账户相关的API访问
@@ -21,15 +24,10 @@ impl OkxApiTrait for OkxAccount {
     fn new(client: OkxClient) -> Self {
         OkxAccount { client }
     }
-    fn from_env() -> Result<Self,Error> {
-        let client = OkxClient::from_env()?;
-        Ok(OkxAccount::new(client))
-    }
     fn client(&self) -> &OkxClient {
         &self.client
     }
 }
-
 impl OkxAccount {
     /// 查询账户余额
     pub async fn get_balance(&self, ccy: Option<&str>) -> Result<Vec<Balance>, Error> {
@@ -86,7 +84,7 @@ impl OkxAccount {
     /// 设置杠杆倍数
     pub async fn set_leverage(
         &self,
-        params: SetLeverageRequest
+        params: SetLeverageRequest,
     ) -> Result<serde_json::Value, Error> {
         let path = format!("{}/set-leverage", API_ACCOUNT_PATH);
 
@@ -104,7 +102,7 @@ impl OkxAccount {
         ccy: Option<&str>,
         px: Option<&str>,
         leverage: Option<&str>,
-    ) -> Result<TradingSwapNumResponseData, Error> {
+    ) -> Result<Vec<TradingSwapNumResponseData>, Error> {
         let mut path = format!(
             "{}/max-size?instId={}&tdMode={}",
             API_ACCOUNT_PATH, inst_id, td_mode
@@ -123,7 +121,7 @@ impl OkxAccount {
         }
 
         self.client
-            .send_request::<TradingSwapNumResponseData>(Method::GET, &path, "")
+            .send_request::<Vec<TradingSwapNumResponseData>>(Method::GET, &path, "")
             .await
     }
 
@@ -185,7 +183,7 @@ impl OkxAccount {
             .send_request::<serde_json::Value>(Method::GET, &path, "")
             .await
     }
-    
+
     /// 获取账户持仓信息
     pub async fn get_account_positions(
         &self,
@@ -216,12 +214,11 @@ impl OkxAccount {
             .send_request::<Vec<Position>>(Method::GET, &path, "")
             .await
     }
-} 
+}
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::config::init_env;
-
 
     #[tokio::test]
     async fn test_get_balance() {

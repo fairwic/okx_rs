@@ -1,6 +1,6 @@
 [package]
 name = "okx"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2021"
 authors = ["fairwic <chaoliushishangfaner@gmail.com>"]
 description = "OKX交易所API SDK"
@@ -11,7 +11,12 @@ keywords = ["okx", "cryptocurrency", "trading", "api", "sdk"]
 categories = ["api-bindings", "finance"]
 
 [dependencies]
-tokio = { version = "1.37.0", features = ["rt", "rt-multi-thread", "macros", "full"] }
+tokio = { version = "1.37.0", features = [
+    "rt",
+    "rt-multi-thread",
+    "macros",
+    "full",
+] }
 reqwest = { version = "0.11.27", features = ["json"] }
 serde = { version = "1.0.202", features = ["derive"] }
 serde_json = "1.0.117"

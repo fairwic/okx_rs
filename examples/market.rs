@@ -1,3 +1,4 @@
+use okx::api::api_trait::OkxApiTrait;
 use okx::config::Credentials;
 use okx::{Error, OkxClient, OkxMarket};
 #[tokio::main]
