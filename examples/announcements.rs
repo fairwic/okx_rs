@@ -1,7 +1,6 @@
 use okx::api::announcements::announcements_api::OkxAnnouncements;
 use okx::api::api_trait::OkxApiTrait;
-use okx::config::Credentials;
-use okx::{Error, OkxClient};
+use okx::Error;
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     env_logger::init();

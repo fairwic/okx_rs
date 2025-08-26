@@ -1,5 +1,6 @@
 use okx::config::Credentials;
 use okx::{Error, OkxAsset, OkxClient};
+use okx::api::api_trait::OkxApiTrait;
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     env_logger::init();

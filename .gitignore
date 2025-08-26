@@ -1,5 +1,5 @@
 .env
-.idea/
+.idea/*
 .vscode
 build
 target
