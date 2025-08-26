@@ -151,22 +151,22 @@ impl Credentials {
         }
     }
 
-       /// 从环境变量读取凭证
-       pub fn from_env_with_simulated_trading() -> Result<Self, Error> {
+    /// 从环境变量读取凭证
+    pub fn from_env_with_simulated_trading() -> Result<Self, Error> {
         // 确保环境变量已加载
         init_env();
         let api_key = env::var("OKX_SIMULATED_API_KEY")
             .map_err(|_| Error::ConfigError("缺少环境变量: OKX_SIMULATED_API_KEY".to_string()))?;
 
-        let api_secret = env::var("OKX_SIMULATED_API_SECRET")
-            .map_err(|_| Error::ConfigError("缺少环境变量: OKX_SIMULATED_API_SECRET".to_string()))?;
+        let api_secret = env::var("OKX_SIMULATED_API_SECRET").map_err(|_| {
+            Error::ConfigError("缺少环境变量: OKX_SIMULATED_API_SECRET".to_string())
+        })?;
 
-        let passphrase = env::var("OKX_SIMULATED_PASSPHRASE")
-            .map_err(|_| Error::ConfigError("缺少环境变量: OKX_SIMULATED_PASSPHRASE".to_string()))?;
+        let passphrase = env::var("OKX_SIMULATED_PASSPHRASE").map_err(|_| {
+            Error::ConfigError("缺少环境变量: OKX_SIMULATED_PASSPHRASE".to_string())
+        })?;
 
         let is_simulated_trading = "1".to_string();
-        println!("is_simulated_trading: {}", is_simulated_trading);
-        println!("api_key: {}", api_key);
         Ok(Self::new(
             api_key,
             api_secret,
@@ -189,8 +189,6 @@ impl Credentials {
 
         let is_simulated_trading = env::var("OKX_SIMULATED_TRADING")
             .map_err(|_| Error::ConfigError("缺少环境变量: OKX_SIMULATED_TRADING".to_string()))?;
-        println!("is_simulated_trading: {}", is_simulated_trading);
-        println!("api_key: {}", api_key);
         Ok(Self::new(
             api_key,
             api_secret,

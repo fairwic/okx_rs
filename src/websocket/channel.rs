@@ -123,4 +123,4 @@ impl ChannelType {
             Self::Custom(name) => name,
         }
     }
-} 
+}

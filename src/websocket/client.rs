@@ -486,7 +486,8 @@ mod tests {
         let api_key = env::var("OKX_API_KEY").expect("OKX_API_KEY 未设置");
         let api_secret = env::var("OKX_API_SECRET").expect("OKX_API_SECRET 未设置");
         let passphrase = env::var("OKX_PASSPHRASE").expect("OKX_PASSPHRASE 未设置");
-        let mut client = OkxWebsocketClient::new_private(Credentials::new(api_key, api_secret, passphrase, "0"));
+        let mut client =
+            OkxWebsocketClient::new_private(Credentials::new(api_key, api_secret, passphrase, "0"));
         let mut rx_private = client.connect().await.unwrap();
         let args = Args::new()
             .with_inst_id("BTC-USDT".to_string())

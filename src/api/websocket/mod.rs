@@ -1,3 +1,3 @@
 mod websocket_api;
 
-pub use websocket_api::OkxWebsocketApi; 
+pub use websocket_api::OkxWebsocketApi;

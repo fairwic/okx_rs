@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::dto::market_dto::TickerOkxResDto;
+use serde::{Deserialize, Serialize};
 // {"arg":{"channel":"candle1H","instId":"BTC-USDT-SWAP"},"data":[["1747141200000","103644.1","103700","103629.2","103700","11316.08","113.1608","11731625.855","0"]]}
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CandleArg {
@@ -31,7 +31,6 @@ pub struct TickerOkxResWsDto {
     #[serde(rename = "data")]
     pub data: Vec<TickerOkxResDto>,
 }
-
 
 // Object {"code": String("60012"), "connId": String("5c13bf3a"), "event": String("error"), "msg": String("Illegal request: {\"ping\":1747191152912}")}
 #[derive(Serialize, Deserialize, Debug)]

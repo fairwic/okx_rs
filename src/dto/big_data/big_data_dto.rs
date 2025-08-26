@@ -36,4 +36,4 @@ pub struct TakerVolume {
     pub ts: String,       // 时间戳
     pub sell_vol: String, // 卖出量
     pub buy_vol: String,  // 买入量
-} 
+}

@@ -1,15 +1,10 @@
+mod channel;
 mod client;
 mod models;
-mod channel;
 
+pub use channel::{Args, ChannelType};
 pub use client::OkxWebsocketClient;
 pub use models::{
-    WebSocketMessage,
-    WebSocketRequest,
-    WebSocketResponse,
-    WebSocketAuth,
-    WebSocketChannel,
-    WebSocketSubscription,
-    WebSocketOperation,
+    WebSocketAuth, WebSocketChannel, WebSocketMessage, WebSocketOperation, WebSocketRequest,
+    WebSocketResponse, WebSocketSubscription,
 };
-pub use channel::{ChannelType, Args};

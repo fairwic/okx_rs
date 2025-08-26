@@ -5,12 +5,7 @@ use serde_json::json;
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     env_logger::init();
-    let credentials = Credentials::new(
-        "",
-        "",
-        "",
-        "",
-    ); // 初始化客户端
+    let credentials = Credentials::new("", "", "", ""); // 初始化客户端
     let client: OkxClient = OkxClient::new(credentials).unwrap();
 
     let trade = OkxTrade::new(client.clone());

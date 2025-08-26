@@ -1,11 +1,13 @@
 use crate::config::{Credentials, CONFIG};
-use crate::debug_helper::DebugHelper;
+
+use crate::enums::language_enums::Language;
 use crate::error::Error;
 use crate::utils;
-use log::{debug, error, info};
+use log::{debug, error};
 use reqwest::{Client, Method, StatusCode};
-use serde::{de, Deserialize, Serialize};
-use serde_json::json;
+use serde::{Deserialize, Serialize};
+use serde_json::{json, Deserializer};
+use serde_path_to_error;
 use std::time::Duration;
 /// 通用的OKX API响应结构
 #[derive(Serialize, Deserialize, Debug)]
@@ -35,6 +37,8 @@ pub struct OkxClient {
     base_url: String,
     /// 请求有效期（毫秒）
     request_expiration_ms: i64,
+    /// 请求头中 Accept-Language
+    accept_language: Option<Language>,
 }
 
 impl OkxClient {
@@ -51,6 +55,7 @@ impl OkxClient {
             credentials,
             base_url: CONFIG.api_url.clone(),
             request_expiration_ms: CONFIG.request_expiration_ms,
+            accept_language: None,
         })
     }
 
@@ -80,6 +85,11 @@ impl OkxClient {
     /// 设置请求有效期
     pub fn set_request_expiration(&mut self, expiration_ms: i64) {
         self.request_expiration_ms = expiration_ms;
+    }
+
+    /// 设置请求头中 Accept-Language
+    pub fn set_accept_language(&mut self, accept_language: Language) {
+        self.accept_language = Some(accept_language);
     }
 
     /// 发送API请求并返回反序列化的响应
@@ -114,21 +124,26 @@ impl OkxClient {
         if self.is_simulated_trading == "1" {
             request_builder = request_builder.header("x-simulated-trading", "1");
         }
-
+        if let Some(accept_language) = &self.accept_language {
+            request_builder =
+                request_builder.header("Accept-Language", accept_language.to_string());
+        }
         debug!("OKX API请求: {}", url);
         debug!("OKX API请求: {}", body.to_string());
         let request_builder = request_builder.body(body.to_string());
         let response = request_builder.send().await.map_err(Error::HttpError)?;
         let status_code = response.status();
         let response_body = response.text().await.map_err(Error::HttpError)?;
+        debug!("okx result: {:?}", response_body);
         match status_code {
             StatusCode::OK => {
-                let result: OkxApiResponse<T> =
-                    serde_json::from_str(&response_body).map_err(|e| {
-                        error!("JSON解析失败 - 原始响应: {}", response_body);
+                // 使用 serde_path_to_error 来获取详细的字段路径信息
+                let deserializer = &mut Deserializer::from_str(&response_body);
+                let result: OkxApiResponse<T> = serde_path_to_error::deserialize(deserializer)
+                    .map_err(|e| {
                         error!("JSON解析错误详情: {}", e);
                         error!("请求URL: {}, 请求方法: {}", url, method_str);
-                        Error::JsonError(e)
+                        Error::JsonError(e.into_inner())
                     })?;
                 if result.code == "0" {
                     return Ok(result.data);

@@ -99,4 +99,4 @@ pub struct RateLimit {
     /// API限制的窗口时间（毫秒）
     #[serde(rename = "intervalSec")]
     pub interval_sec: String,
-} 
+}

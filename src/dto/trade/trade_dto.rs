@@ -1,7 +1,7 @@
 use crate::dto::common::{MarginMode, OrderType, PositionSide, Side};
 use core::fmt::{Display, Formatter};
 use serde::{Deserialize, Serialize};
-
+///保证金模式
 pub enum TdModeEnum {
     /// 保证金模式：isolated：逐仓
     ISOLATED,
@@ -10,6 +10,7 @@ pub enum TdModeEnum {
     ///非保证模式，现货
     CASH,
 }
+///止盈止损订单类型
 impl Display for TpOrdKindEnum {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -18,7 +19,7 @@ impl Display for TpOrdKindEnum {
         }
     }
 }
-
+///保证金模式
 impl Display for TdModeEnum {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -29,6 +30,7 @@ impl Display for TdModeEnum {
     }
 }
 
+///止盈止损请求参数结构体
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AttachAlgoOrdReqDto {
     /// 下单附带止盈止损时，客户自定义的策略订单ID
@@ -101,7 +103,7 @@ impl AttachAlgoOrdReqDto {
         }
     }
 }
-
+///订单请求参数结构体
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct OrderReqDto {
@@ -174,9 +176,238 @@ pub struct OrderReqDto {
     pub attach_algo_ords: Option<Vec<AttachAlgoOrdReqDto>>,
 }
 
-/// 订单信息
+///策略订单响应结构体
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Order {
+#[serde(rename_all = "camelCase")]
+pub struct LinkedAlgoOrd {
+    /// 策略订单唯一标识
+    #[serde(rename = "algoId")]
+    pub algo_id: String,
+}
+///止盈止损响应结构体
+#[derive(Serialize, Clone, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct AttachAlgoOrds {
+    /// 附带止盈止损的订单ID，改单时，可用来标识该笔附带止盈止损订单。下止盈止损委托单时，该值不会传给 algoId
+    pub attach_algo_id: String,
+    /// 下单附带止盈止损时，客户自定义的策略订单ID
+    /// 字母（区分大小写）与数字的组合，可以是纯字母、纯数字且长度要在1-32位之间。
+    /// 订单完全成交，下止盈止损委托单时，该值会传给algoClOrdId
+    pub attach_algo_cl_ord_id: Option<String>,
+    /// 止盈触发价
+    /// 对于条件止盈单，如果填写此参数，必须填写 止盈委托价
+    pub tp_trigger_px: Option<String>,
+    /// 止盈委托价
+    /// 对于条件止盈单，如果填写此参数，必须填写 止盈触发价
+    /// 对于限价止盈单，需填写此参数，不需要填写止盈触发价
+    /// 委托价格为-1时，执行市价止盈
+    pub tp_ord_px: Option<String>,
+    /// 止盈订单类型
+    /// condition: 条件单
+    /// limit: 限价单
+    /// 默认为condition
+    pub tp_ord_kind: Option<String>,
+    /// 止盈触发价类型
+    /// last：最新价格
+    /// index：指数价格
+    /// mark：标记价格
+    /// 默认为last
+    pub tp_trigger_px_type: Option<String>,
+
+    /// 止损触发价，如果填写此参数，必须填写 止损委托价
+    pub sl_trigger_px: Option<String>,
+    /// 止损委托价，如果填写此参数，必须填写 止损触发价
+    /// 委托价格为-1时，执行市价止损
+    pub sl_ord_px: Option<String>,
+    /// 止损触发价类型
+    /// last：最新价格
+    /// index：指数价格
+    /// mark：标记价格
+    /// 默认为last
+    pub sl_trigger_px_type: Option<String>,
+    /// 数量。仅适用于“多笔止盈”的止盈订单，且对于“多笔止盈”的止盈订单必填
+    pub sz: Option<String>,
+    /// 是否启用开仓价止损，仅适用于分批止盈的止损订单，第一笔止盈触发时，止损触发价格是否移动到开仓均价止损
+    /// 0：不开启，默认值
+    /// 1：开启，且止损触发价不能为空
+    pub amend_px_on_trigger_type: Option<String>,
+    /// 委托失败的错误码，默认为""
+    /// 委托失败时有值，如 51020
+    pub fail_code: Option<String>,
+    /// 委托失败的原因，默认为""
+    /// 委托失败时有值
+    pub fail_reason: Option<String>,
+}
+
+///订单详情
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OrderDetailRespDto {
+    /// 产品类型 SPOT：币币
+    // MARGIN：币币杠杆
+    // SWAP：永续合约
+    // FUTURES：交割合约
+    // OPTION：期权
+    pub inst_type: String,
+    /// 产品ID
+    pub inst_id: String,
+    /// 币币市价单委托数量sz的单位
+    /// base_ccy: 交易货币 ；quote_ccy：计价货币
+    /// 仅适用于币币市价订单
+    /// 默认买单为quote_ccy，卖单为base_ccy
+    pub tgt_ccy: String,
+    /// 保证金币种 仅适用于单币种保证金模式下的全仓杠杆订单
+    pub ccy: String,
+    /// 订单ID
+    pub ord_id: String,
+    /// 客户自定义订单ID
+    pub cl_ord_id: String,
+    /// 订单标签
+    pub tag: String,
+    /// 委托价格
+    pub px: String,
+    /// 期权价格
+    pub px_usd: String,
+    /// 期权价格
+    pub px_vol: String,
+    /// 期权价格类型
+    pub px_type: String,
+    /// 委托数量
+    pub sz: String,
+    /// 收益
+    pub pnl: String,
+    /// 订单类型
+    // market：市价单
+    // limit：限价单
+    // post_only：只做maker单
+    // fok：全部成交或立即取消
+    // ioc：立即成交并取消剩余
+    // optimal_limit_ioc：市价委托立即成交并取消剩余（仅适用交割、永续）
+    // mmp：做市商保护(仅适用于组合保证金账户模式下的期权订单)
+    // mmp_and_post_only：做市商保护且只做maker单(仅适用于组合保证金账户模式下的期权订单)
+    // op_fok：期权简选（全部成交或立即取消）
+    pub ord_type: String,
+    /// 订单方向
+    pub side: String,
+    /// 持仓方向
+    pub pos_side: String,
+    /// 交易模式
+    pub td_mode: String,
+    /// 累计成交数量
+    /// 对于币币和杠杆，单位为交易货币，如 BTC-USDT, 单位为 BTC；对于市价单，无论tgtCcy是base_ccy，还是quote_ccy，单位均为交易货币；
+    /// 对于交割、永续以及期权，单位为张。  
+    pub acc_fill_sz: String,
+    /// 最新成交价格，如果成交数量为0，该字段为""
+    pub fill_px: String,
+    /// 最新成交ID
+    pub trade_id: String,
+    /// 最新成交数量
+    /// 对于币币和杠杆，单位为交易货币，如 BTC-USDT, 单位为 BTC；对于市价单，无论tgtCcy是base_ccy，还是quote_ccy，单位均为交易货币；
+    /// 对于交割、永续以及期权，单位为张。
+    pub fill_sz: String,
+    /// 最新成交时间
+    pub fill_time: String,
+    /// 成交均价，如果成交数量为0，该字段也为""
+    pub avg_px: String,
+    /// 订单状态
+    /// canceled：撤单成功
+    /// live：等待成交
+    /// partially_filled：部分成交
+    /// filled：完全成交
+    /// mmp_canceled：做市商保护机制导致的自动撤单
+    pub state: String,
+    /// 杠杆倍数，0.01到125之间的数值，仅适用于 币币杠杆/交割/永续
+    pub lever: String,
+    /// 下单附带止盈止损时，客户自定义的策略订单ID
+    pub attach_algo_cl_ord_id: String,
+    /// 止盈触发价
+    pub tp_trigger_px: String,
+    /**
+     * 止盈触发价类型
+     * last：最新价格
+     * index：指数价格
+     * mark：标记价格
+     */
+    pub tp_trigger_px_type: String,
+    /// 止盈委托价
+    pub tp_ord_px: String,
+    /// 止损触发价
+    pub sl_trigger_px: String,
+    /// 止损触发价类型
+    // last：最新价格
+    // index：指数价格
+    // mark：标记价格
+    pub sl_trigger_px_type: String,
+    /// 止损委托价
+    pub sl_ord_px: String,
+    /// 下单附带止盈止损信息
+    pub attach_algo_ords: Vec<AttachAlgoOrds>,
+    /// 止损订单信息，仅适用于包含限价止盈单的双向止盈止损订单，触发后生成的普通订单
+    pub linked_algo_ord: LinkedAlgoOrd,
+    ///  自成交保护ID如果自成交保护不适用则返回""（已弃用）
+    pub stp_id: String,
+    /// 自成交保护模式
+    pub stp_mode: String,
+    /// 交易手续费币种
+    pub fee_ccy: String,
+    /**
+     * 手续费与返佣
+     * 对于币币和杠杆，为订单交易累计的手续费，平台向用户收取的交易手续费，为负数。如： -0.01
+     * 对于交割、永续和期权，为订单交易累计的手续费和返佣
+     */
+    pub fee: String,
+    /// 返佣金币种
+    pub rebate_ccy: String,
+    /**
+     * 订单来源
+     * 6：计划委托策略触发后的生成的普通单
+     * 7：止盈止损策略触发后的生成的普通单
+     * 13：策略委托单触发后的生成的普通单
+     * 25：移动止盈止损策略触发后的生成的普通单
+     * 34: 追逐限价委托生成的普通单
+     */
+    /// 6：计划委托策略触发后的生成的普通单
+    pub source: String,
+    /// 返佣金额，仅适用于币币和杠杆，平台向达到指定lv交易等级的用户支付的挂单奖励（返佣），如果没有返佣金，该字段为“”。手续费返佣为正数，如：0.01
+    pub rebate: String,
+    /// 订单种类
+    /// normal：普通委托
+    /// twap：TWAP自动换币
+    /// adl：ADL自动减仓
+    /// full_liquidation：强制平仓
+    /// partial_liquidation：强制减仓
+    /// delivery：交割
+    /// ddh：对冲减仓类型订单
+    /// auto_conversion：抵押借币自动还币订单
+    pub category: String,
+    /// 是否只减仓，true 或 false
+    pub reduce_only: String,
+    /// 订单取消来源的原因枚举值代码
+    pub cancel_source: String,
+    /// 订单取消来源的对应具体原因
+    pub cancel_source_reason: String,
+    /// 一键借币类型，仅适用于杠杆逐仓的一键借币模式
+    /// 一键借币类型，仅适用于杠杆逐仓的一键借币模式
+    /// manual：手动
+    /// auto_borrow：自动借币
+    /// auto_repay：自动还币
+    pub quick_mgn_type: String,
+    /// 客户自定义策略订单ID。策略订单触发，且策略单有algoClOrdId时有值，否则为""
+    pub algo_cl_ord_id: String,
+    /// 策略委托单ID，策略订单触发时有值，否则为""
+    pub algo_id: String,
+    /// 是否为限价止盈，true 或 false.
+    pub is_tp_limit: String,
+    /// 订单状态更新时间，Unix时间戳的毫秒数格式，如 1597026383085
+    pub u_time: String,
+    /// 订单创建时间，Unix时间戳的毫秒数格式，如 1597026383085
+    pub c_time: String,
+    /// 用于交易的计价币种。
+    pub trade_quote_ccy: String,
+}
+/// 未成交订单信息
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OrderPendingRespDto {
     /// 产品类型
     #[serde(rename = "instType")]
     pub inst_type: String,

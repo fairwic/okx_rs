@@ -1,8 +1,8 @@
 use crate::api::api_trait::OkxApiTrait;
 use crate::api::API_ASSET_PATH;
 use crate::client::OkxClient;
-use crate::dto::asset::asset_dto::{AssetBalance, DepositRecord, TransferRecord, WithdrawalRecord};
 use crate::dto::asset::asset_dto::TransferOkxReqDto;
+use crate::dto::asset::asset_dto::{AssetBalance, DepositRecord, TransferRecord, WithdrawalRecord};
 use crate::error::Error;
 use reqwest::Method;
 use serde_json::json;
@@ -56,7 +56,6 @@ impl OkxAsset {
                 path.push_str(&format!("&ccy={}", ccy_param));
             }
         }
-        println!("path: {:?}", path);
         self.client
             .send_request::<Vec<AssetBalance>>(Method::GET, &path, "")
             .await

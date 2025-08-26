@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::enums::account_enums::AccountType;
+use serde::{Deserialize, Serialize};
 
 /// 资产余额信息
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -132,4 +132,4 @@ pub struct DepositRecord {
     pub state: String,
     /// 充值时间
     pub ts: String,
-} 
+}

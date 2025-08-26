@@ -1,7 +1,7 @@
 use core::time::Duration;
 use okx::websocket::{Args, ChannelType, OkxWebsocketClient};
-use tokio::time::sleep;
 use okx::Error;
+use tokio::time::sleep;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {

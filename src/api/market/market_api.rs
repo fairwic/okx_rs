@@ -5,6 +5,7 @@ use crate::dto::market::market_dto::{
     CandleOkxRespDto, Depth, InstrumentOkxResDto, TickerOkxResDto,
 };
 use crate::error::Error;
+use log::debug;
 use reqwest::Method;
 
 /// OKX市场数据API
@@ -118,7 +119,6 @@ impl OkxMarket {
         before: Option<&str>,
         limit: Option<&str>,
     ) -> Result<Vec<CandleOkxRespDto>, Error> {
-        println!("OKX inst_id: {}", inst_id);
         let mut path = format!("{}/history-candles?instId={}", API_MARKET_PATH, inst_id);
 
         path.push_str(&format!("&bar={}", bar));
@@ -134,7 +134,7 @@ impl OkxMarket {
         if let Some(l) = limit {
             path.push_str(&format!("&limit={}", l));
         }
-        println!("OKX path: {}", path);
+        debug!("OKX path: {}", path);
         let res: Vec<Vec<String>> = self
             .client
             .send_request::<Vec<Vec<String>>>(Method::GET, &path, "")

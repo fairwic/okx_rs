@@ -1,8 +1,8 @@
 use crate::api::api_trait::OkxApiTrait;
 use crate::api::API_TRADE_PATH;
 use crate::client::OkxClient;
-use crate::dto::trade::trade_dto::{FeeRate, Order, OrderReqDto, OrderResDto};
-use crate::dto::trade_dto::CloseOrderReqDto;
+use crate::dto::trade::trade_dto::{FeeRate, OrderPendingRespDto, OrderReqDto, OrderResDto};
+use crate::dto::trade_dto::{CloseOrderReqDto, OrderDetailRespDto};
 use crate::error::Error;
 use reqwest::Method;
 use serde_json::json;
@@ -133,7 +133,7 @@ impl OkxTrade {
         inst_id: &str,
         ord_id: Option<&str>,
         cl_ord_id: Option<&str>,
-    ) -> Result<Vec<Order>, Error> {
+    ) -> Result<Vec<OrderDetailRespDto>, Error> {
         let mut path = format!("{}/order?instId={}", API_TRADE_PATH, inst_id);
 
         if let Some(order_id) = ord_id {
@@ -145,7 +145,7 @@ impl OkxTrade {
         }
 
         self.client
-            .send_request::<Vec<Order>>(Method::GET, &path, "")
+            .send_request::<Vec<OrderDetailRespDto>>(Method::GET, &path, "")
             .await
     }
 
@@ -159,7 +159,7 @@ impl OkxTrade {
         after: Option<&str>,
         before: Option<&str>,
         limit: Option<u32>,
-    ) -> Result<Vec<Order>, Error> {
+    ) -> Result<Vec<OrderPendingRespDto>, Error> {
         let mut path = format!("{}/orders-pending", API_TRADE_PATH);
         let mut query_params = vec![];
 
@@ -196,7 +196,7 @@ impl OkxTrade {
         }
 
         self.client
-            .send_request::<Vec<Order>>(Method::GET, &path, "")
+            .send_request::<Vec<OrderPendingRespDto>>(Method::GET, &path, "")
             .await
     }
 
@@ -210,7 +210,7 @@ impl OkxTrade {
         after: Option<&str>,
         before: Option<&str>,
         limit: Option<u32>,
-    ) -> Result<Vec<Order>, Error> {
+    ) -> Result<Vec<OrderPendingRespDto>, Error> {
         let mut path = format!("{}/orders-history?instType={}", API_TRADE_PATH, inst_type);
 
         if let Some(id) = inst_id {
@@ -238,7 +238,7 @@ impl OkxTrade {
         }
 
         self.client
-            .send_request::<Vec<Order>>(Method::GET, &path, "")
+            .send_request::<Vec<OrderPendingRespDto>>(Method::GET, &path, "")
             .await
     }
 

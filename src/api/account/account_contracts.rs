@@ -1,8 +1,7 @@
+use crate::config::Credentials;
+use crate::{Error, OkxClient};
 use reqwest::Method;
 use serde::{Deserialize, Serialize};
-use crate::{Error, OkxClient};
-use crate::config::Credentials;
-
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct VolumeData {
@@ -10,7 +9,6 @@ pub struct VolumeData {
     pub oi: String,  //持仓总量（USD
     pub vol: String, //交易总量（USD）
 }
-
 
 pub struct OkxContracts {
     client: OkxClient,
@@ -60,9 +58,7 @@ impl OkxContracts {
             path.push_str(&format!("&period={}", period));
         }
 
-        let res=self.client
-            .send_request(Method::GET, &path, "")
-            .await?;
+        let res = self.client.send_request(Method::GET, &path, "").await?;
         Ok(res)
     }
 }
