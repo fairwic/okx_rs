@@ -1,6 +1,6 @@
 [package]
 name = "okx"
-version = "0.1.5"
+version = "0.1.6"
 edition = "2021"
 authors = ["fairwic <chaoliushishangfaner@gmail.com>"]
 description = "OKX交易所API SDK"
