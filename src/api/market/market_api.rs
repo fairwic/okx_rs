@@ -79,7 +79,9 @@ impl OkxMarket {
             .await
     }
 
-    /// 获取产品K线数据
+    /// 获取K线数据。K线数据按请求的粒度分组返回，K线数据每个粒度最多可获取最近1,440条
+    /// 限速：40次/2s
+    // 限速规则：IP
     pub async fn get_candles(
         &self,
         inst_id: &str,
@@ -110,7 +112,9 @@ impl OkxMarket {
             .await
     }
 
-    /// 获取历史K线数据
+    // 获取最近几年的历史k线数据(1s k线支持查询最近3个月的数据)
+    // 限速：20次/2s
+    // 限速规则：IP
     pub async fn get_history_candles(
         &self,
         inst_id: &str,

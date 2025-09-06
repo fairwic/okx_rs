@@ -1,4 +1,5 @@
 use crate::dto::common::{MarginMode, OrderType, PositionSide, Side};
+use crate::dto::EnumToStrTrait;
 use core::fmt::{Display, Formatter};
 use serde::{Deserialize, Serialize};
 ///保证金模式
@@ -10,25 +11,26 @@ pub enum TdModeEnum {
     ///非保证模式，现货
     CASH,
 }
-///止盈止损订单类型
-impl Display for TpOrdKindEnum {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+impl EnumToStrTrait for TdModeEnum {
+    fn as_str(&self) -> &'static str {
         match self {
-            TpOrdKindEnum::CONDITION => write!(f, "condition"),
-            TpOrdKindEnum::LIMIT => write!(f, "limit"),
+            TdModeEnum::ISOLATED => "isolated",
+            TdModeEnum::CROSS => "cross",
+            TdModeEnum::CASH => "cash",
         }
     }
 }
-///保证金模式
-impl Display for TdModeEnum {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            TdModeEnum::ISOLATED => write!(f, "isolated"),
-            TdModeEnum::CROSS => write!(f, "cross"),
-            TdModeEnum::CASH => write!(f, "cash"),
-        }
-    }
-}
+
+// ///保证金模式
+// impl Display for TdModeEnum {
+//     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+//         match self {
+//             TdModeEnum::ISOLATED => write!(f, "isolated"),
+//             TdModeEnum::CROSS => write!(f, "cross"),
+//             TdModeEnum::CASH => write!(f, "cash"),
+//         }
+//     }
+// }
 
 ///止盈止损请求参数结构体
 #[derive(Serialize, Deserialize, Debug)]
@@ -93,7 +95,7 @@ impl AttachAlgoOrdReqDto {
             attach_algo_cl_ord_id: None,
             tp_trigger_px: tp_trigger_px,
             tp_ord_px: tp_ord_px,
-            tp_ord_kind: Some(TpOrdKindEnum::CONDITION.to_string()),
+            tp_ord_kind: Some(TpOrdKindEnum::CONDITION.as_str().to_owned()),
             sl_trigger_px: sl_trigger_px,
             sl_ord_px: sl_ord_px,
             tp_trigger_px_type: Some("last".to_string()),
@@ -566,6 +568,14 @@ pub enum TpOrdKindEnum {
     // : 限价单
     LIMIT,
 }
+impl EnumToStrTrait for TpOrdKindEnum {
+    fn as_str(&self) -> &'static str {
+        match self {
+            TpOrdKindEnum::CONDITION => "condition",
+            TpOrdKindEnum::LIMIT => "limit",
+        }
+    }
+}
 
 /// 订单响应数据
 #[derive(Serialize, Deserialize, Debug)]
@@ -644,16 +654,15 @@ pub enum OrdTypeEnum {
     // 市价委托立即成交并取消剩余（仅适用交割、永续）
     OptimalLimitIoc,
 }
-
-impl Display for OrdTypeEnum {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+impl EnumToStrTrait for OrdTypeEnum {
+    fn as_str(&self) -> &'static str {
         match self {
-            OrdTypeEnum::LIMIT => write!(f, "limit"),
-            OrdTypeEnum::MARKET => write!(f, "market"),
-            OrdTypeEnum::PostOnly => write!(f, "post_only"),
-            OrdTypeEnum::FOK => write!(f, "fok"),
-            OrdTypeEnum::Ioc => write!(f, "ioc"),
-            OrdTypeEnum::OptimalLimitIoc => write!(f, "optimal_limit_ioc"),
+            OrdTypeEnum::LIMIT => "limit",
+            OrdTypeEnum::MARKET => "market",
+            OrdTypeEnum::PostOnly => "post_only",
+            OrdTypeEnum::FOK => "fok",
+            OrdTypeEnum::Ioc => "ioc",
+            OrdTypeEnum::OptimalLimitIoc => "optimal_limit_ioc",
         }
     }
 }

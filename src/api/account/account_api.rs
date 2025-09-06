@@ -185,6 +185,8 @@ impl OkxAccount {
     }
 
     /// 获取账户持仓信息
+    /// 限速：10次/2s
+    // 限速规则：User ID
     pub async fn get_account_positions(
         &self,
         inst_type: Option<&str>,

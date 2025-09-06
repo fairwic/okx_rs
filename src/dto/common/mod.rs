@@ -1,5 +1,9 @@
-use core::fmt::{Display, Formatter};
 use serde::{Deserialize, Serialize};
+
+/// 枚举转字符串
+pub trait EnumToStrTrait {
+    fn as_str(&self) -> &'static str;
+}
 
 /// 交易对信息
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -38,11 +42,12 @@ pub enum Side {
     #[serde(rename = "sell")]
     Sell,
 }
-impl Display for Side {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+/// 方向枚举转字符串
+impl EnumToStrTrait for Side {
+    fn as_str(&self) -> &'static str {
         match self {
-            Side::Buy => write!(f, "buy"),
-            Side::Sell => write!(f, "sell"),
+            Side::Buy => "buy",
+            Side::Sell => "sell",
         }
     }
 }
@@ -59,12 +64,13 @@ pub enum PositionSide {
     Net, //买卖模式（交割/永续/期权：pos为正代表开多，pos为负代表开空。币币杠杆时，pos均为正，posCcy为交易货币时，代表开多；posCcy为计价货币时，代表开空。
 }
 
-impl Display for PositionSide {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+/// 持仓方向枚举转字符串
+impl EnumToStrTrait for PositionSide {
+    fn as_str(&self) -> &'static str {
         match self {
-            PositionSide::Long => write!(f, "long"),
-            PositionSide::Short => write!(f, "short"),
-            PositionSide::Net => write!(f, "net"),
+            PositionSide::Long => "long",
+            PositionSide::Short => "short",
+            PositionSide::Net => "net",
         }
     }
 }

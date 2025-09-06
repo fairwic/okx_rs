@@ -200,7 +200,10 @@ impl OkxTrade {
             .await
     }
 
-    /// 获取历史订单记录（最近7天）
+    // 获取最近7天挂单，且完成的订单数据，包括7天以前挂单，但近7天才成交的订单数据。按照订单创建时间倒序排序。
+    // 已经撤销的未成交单 只保留2小时
+    // 限速：40次/2s
+    // 限速规则：User ID
     pub async fn get_order_history(
         &self,
         inst_type: &str,
@@ -210,7 +213,7 @@ impl OkxTrade {
         after: Option<&str>,
         before: Option<&str>,
         limit: Option<u32>,
-    ) -> Result<Vec<OrderPendingRespDto>, Error> {
+    ) -> Result<Vec<OrderDetailRespDto>, Error> {
         let mut path = format!("{}/orders-history?instType={}", API_TRADE_PATH, inst_type);
 
         if let Some(id) = inst_id {
@@ -238,7 +241,55 @@ impl OkxTrade {
         }
 
         self.client
-            .send_request::<Vec<OrderPendingRespDto>>(Method::GET, &path, "")
+            .send_request::<Vec<OrderDetailRespDto>>(Method::GET, &path, "")
+            .await
+    }
+
+    ///GET / 获取历史订单记录（近三个月）
+    /// 获取最近3个月挂单，且完成的订单数据，包括3个月以前挂单，但近3个月才成交的订单数据。按照订单创建时间倒序排序。
+    /// 限速：20次/2s
+    /// 限速规则：User ID
+    pub async fn orders_history_archive(
+        &self,
+        inst_type: &str,
+        inst_id: Option<&str>,
+        ord_type: Option<&str>,
+        state: Option<&str>,
+        after: Option<&str>,
+        before: Option<&str>,
+        limit: Option<u32>,
+    ) -> Result<Vec<OrderDetailRespDto>, Error> {
+        let mut path = format!(
+            "{}/orders-history-archive?instType={}",
+            API_TRADE_PATH, inst_type
+        );
+
+        if let Some(id) = inst_id {
+            path.push_str(&format!("&instId={}", id));
+        }
+
+        if let Some(ot) = ord_type {
+            path.push_str(&format!("&ordType={}", ot));
+        }
+
+        if let Some(s) = state {
+            path.push_str(&format!("&state={}", s));
+        }
+
+        if let Some(a) = after {
+            path.push_str(&format!("&after={}", a));
+        }
+
+        if let Some(b) = before {
+            path.push_str(&format!("&before={}", b));
+        }
+
+        if let Some(l) = limit {
+            path.push_str(&format!("&limit={}", l));
+        }
+
+        self.client
+            .send_request::<Vec<OrderDetailRespDto>>(Method::GET, &path, "")
             .await
     }
 
@@ -313,11 +364,11 @@ impl OkxTrade {
     /// 平仓 (从顶层trade模块合并)
     pub async fn close_position(
         &self,
-        params: CloseOrderReqDto,
+        params: &CloseOrderReqDto,
     ) -> Result<serde_json::Value, Error> {
         let path = format!("{}/close-position", API_TRADE_PATH);
 
-        let body_str = serde_json::to_string(&params).map_err(Error::JsonError)?;
+        let body_str = serde_json::to_string(params).map_err(Error::JsonError)?;
         self.client
             .send_request::<serde_json::Value>(Method::POST, &path, &body_str)
             .await

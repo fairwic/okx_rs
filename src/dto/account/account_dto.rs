@@ -2,7 +2,7 @@ use crate::dto::common::MarginMode;
 use serde::{Deserialize, Serialize};
 
 /// 平仓策略委托订单结构体
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CloseOrderAlgo {
     /// 策略委托单ID
     pub algo_id: String,
@@ -404,7 +404,7 @@ pub struct SetLeverageData {
 }
 
 /// 持仓信息结构体
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Position {
     /// 产品类型
