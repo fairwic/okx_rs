@@ -2,7 +2,7 @@ use crate::api::api_trait::OkxApiTrait;
 use crate::api::API_TRADE_PATH;
 use crate::client::OkxClient;
 use crate::dto::trade::trade_dto::{FeeRate, OrderPendingRespDto, OrderReqDto, OrderResDto};
-use crate::dto::trade_dto::{CloseOrderReqDto, OrderDetailRespDto};
+use crate::dto::trade_dto::{CloseOrderReqDto, OrdListReqDto, OrderDetailRespDto};
 use crate::error::Error;
 use reqwest::Method;
 use serde_json::json;
@@ -206,37 +206,31 @@ impl OkxTrade {
     // 限速规则：User ID
     pub async fn get_order_history(
         &self,
-        inst_type: &str,
-        inst_id: Option<&str>,
-        ord_type: Option<&str>,
-        state: Option<&str>,
-        after: Option<&str>,
-        before: Option<&str>,
-        limit: Option<u32>,
+        params: OrdListReqDto,
     ) -> Result<Vec<OrderDetailRespDto>, Error> {
-        let mut path = format!("{}/orders-history?instType={}", API_TRADE_PATH, inst_type);
+        let mut path = format!("{}/orders-history?instType={}", API_TRADE_PATH, params.inst_type);
 
-        if let Some(id) = inst_id {
+        if let Some(id) = params.inst_id {
             path.push_str(&format!("&instId={}", id));
         }
 
-        if let Some(ot) = ord_type {
+        if let Some(ot) = params.ord_type {
             path.push_str(&format!("&ordType={}", ot));
         }
 
-        if let Some(s) = state {
+        if let Some(s) = params.state {
             path.push_str(&format!("&state={}", s));
         }
 
-        if let Some(a) = after {
+        if let Some(a) = params.after {
             path.push_str(&format!("&after={}", a));
         }
 
-        if let Some(b) = before {
+        if let Some(b) = params.before {
             path.push_str(&format!("&before={}", b));
         }
 
-        if let Some(l) = limit {
+        if let Some(l) = params.limit {
             path.push_str(&format!("&limit={}", l));
         }
 
@@ -249,42 +243,36 @@ impl OkxTrade {
     /// 获取最近3个月挂单，且完成的订单数据，包括3个月以前挂单，但近3个月才成交的订单数据。按照订单创建时间倒序排序。
     /// 限速：20次/2s
     /// 限速规则：User ID
-    pub async fn orders_history_archive(
+    pub async fn get_order_history_archive(
         &self,
-        inst_type: &str,
-        inst_id: Option<&str>,
-        ord_type: Option<&str>,
-        state: Option<&str>,
-        after: Option<&str>,
-        before: Option<&str>,
-        limit: Option<u32>,
+        params: OrdListReqDto,
     ) -> Result<Vec<OrderDetailRespDto>, Error> {
         let mut path = format!(
             "{}/orders-history-archive?instType={}",
-            API_TRADE_PATH, inst_type
+            API_TRADE_PATH, params.inst_type
         );
 
-        if let Some(id) = inst_id {
+        if let Some(id) = params.inst_id {
             path.push_str(&format!("&instId={}", id));
         }
 
-        if let Some(ot) = ord_type {
+        if let Some(ot) = params.ord_type {
             path.push_str(&format!("&ordType={}", ot));
         }
 
-        if let Some(s) = state {
+        if let Some(s) = params.state {
             path.push_str(&format!("&state={}", s));
         }
 
-        if let Some(a) = after {
+        if let Some(a) = params.after {
             path.push_str(&format!("&after={}", a));
         }
 
-        if let Some(b) = before {
+        if let Some(b) = params.before {
             path.push_str(&format!("&before={}", b));
         }
 
-        if let Some(l) = limit {
+        if let Some(l) = params.limit {
             path.push_str(&format!("&limit={}", l));
         }
 

@@ -666,3 +666,13 @@ impl EnumToStrTrait for OrdTypeEnum {
         }
     }
 }
+
+pub struct OrdListReqDto {
+    pub inst_type: String,
+    pub inst_id: Option<String>,
+    pub ord_type: Option<String>,
+    pub state: Option<String>,
+    pub after: Option<String>,
+    pub before: Option<String>,
+    pub limit: Option<u32>,
+}
