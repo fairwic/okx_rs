@@ -48,9 +48,82 @@ pub enum Error {
         smg: String,
     },
 
+    /// 连接错误
+    #[error("连接错误: {0}")]
+    ConnectionError(String),
+
+    /// 订阅错误
+    #[error("订阅错误: {0}")]
+    SubscriptionError(String),
+
+    /// 管理器错误
+    #[error("管理器错误: {0}")]
+    ManagerError(String),
+
+    /// 网络错误
+    #[error("网络错误: {0}")]
+    NetworkError(String),
+
+    /// 超时错误
+    #[error("超时错误: {0}")]
+    TimeoutError(String),
+
+    /// 限流错误
+    #[error("限流错误: {0}")]
+    RateLimitError(String),
+
     /// 未知错误
     #[error("未知错误: {0}")]
     Unknown(String),
+}
+
+/// 错误严重程度
+#[derive(Debug, Clone, PartialEq)]
+pub enum ErrorSeverity {
+    /// 致命错误 - 需要立即停止系统
+    Critical,
+    /// 严重错误 - 需要人工介入
+    High,
+    /// 中等错误 - 系统可继续运行但需关注
+    Medium,
+    /// 轻微错误 - 仅记录日志
+    Low,
+}
+
+impl Error {
+    /// 获取错误的严重程度
+    pub fn severity(&self) -> ErrorSeverity {
+        match self {
+            Error::AuthenticationError(_) | Error::ConfigError(_) => ErrorSeverity::Critical,
+            Error::NetworkError(_) | Error::ConnectionError(_) => ErrorSeverity::High,
+            Error::WebSocketError(_) | Error::SubscriptionError(_) => ErrorSeverity::Medium,
+            Error::TimeoutError(_) | Error::RateLimitError(_) => ErrorSeverity::Medium,
+            Error::JsonError(_) | Error::ParameterError(_) => ErrorSeverity::Low,
+            _ => ErrorSeverity::Medium,
+        }
+    }
+
+    /// 判断错误是否可恢复
+    pub fn is_recoverable(&self) -> bool {
+        match self {
+            Error::NetworkError(_) | Error::ConnectionError(_) | Error::TimeoutError(_) => true,
+            Error::WebSocketError(_) | Error::SubscriptionError(_) => true,
+            Error::RateLimitError(_) => true,
+            Error::AuthenticationError(_) | Error::ConfigError(_) => false,
+            _ => false,
+        }
+    }
+
+    /// 获取建议的重试延迟（秒）
+    pub fn retry_delay(&self) -> Option<u64> {
+        match self {
+            Error::NetworkError(_) | Error::ConnectionError(_) => Some(5),
+            Error::TimeoutError(_) => Some(3),
+            Error::RateLimitError(_) => Some(60),
+            Error::WebSocketError(_) => Some(10),
+            _ => None,
+        }
+    }
 }
 
 /// OKX API特定错误码

@@ -129,7 +129,7 @@ impl OkxClient {
                 request_builder.header("Accept-Language", accept_language.to_string());
         }
         debug!("OKX API请求: {}", url);
-        debug!("OKX API请求: {}", body.to_string());
+        debug!("OKX API请求: {}", body);
         let request_builder = request_builder.body(body.to_string());
         let response = request_builder.send().await.map_err(Error::HttpError)?;
         let status_code = response.status();

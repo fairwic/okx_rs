@@ -23,12 +23,20 @@ use crate::error::Error;
 use crate::utils;
 use crate::websocket::channel::{Args, ChannelType};
 use crate::websocket::models::{
-    WebSocketAuth, WebSocketLoginRequest, WebSocketMessage, WebSocketOperation, WebSocketRequest,
+    WebSocketAuth, WebSocketLoginRequest, WebSocketOperation, WebSocketRequest,
     WebSocketSubscription,
 };
 
-type WebSocketSender = Sender<serde_json::Value>;
-type WebSocketConn = WebSocketStream<MaybeTlsStream<TcpStream>>;
+/// 连接状态枚举
+#[derive(Debug, Clone, PartialEq)]
+pub enum ConnectionState {
+    Disconnected,
+    Connecting,
+    Connected,
+    Reconnecting,
+}
+
+
 type WsMessage = Message;
 
 /// OKX WebSocket客户端
@@ -51,6 +59,10 @@ pub struct OkxWebsocketClient {
     connection_task: Option<JoinHandle<()>>,
     /// 重连任务句柄
     reconnect_task: Option<JoinHandle<()>>,
+    /// 连接状态
+    connection_state: Arc<Mutex<ConnectionState>>,
+    /// 最后一次收到消息的时间
+    last_message_time: Arc<Mutex<Instant>>,
     /// 最后一次ping时间
     last_ping_time: Arc<Mutex<Instant>>,
 }
@@ -68,6 +80,8 @@ impl OkxWebsocketClient {
             rx: None,
             connection_task: None,
             reconnect_task: None,
+            connection_state: Arc::new(Mutex::new(ConnectionState::Disconnected)),
+            last_message_time: Arc::new(Mutex::new(Instant::now())),
             last_ping_time: Arc::new(Mutex::new(Instant::now())),
         }
     }
@@ -84,6 +98,8 @@ impl OkxWebsocketClient {
             rx: None,
             connection_task: None,
             reconnect_task: None,
+            connection_state: Arc::new(Mutex::new(ConnectionState::Disconnected)),
+            last_message_time: Arc::new(Mutex::new(Instant::now())),
             last_ping_time: Arc::new(Mutex::new(Instant::now())),
         }
     }
@@ -98,17 +114,59 @@ impl OkxWebsocketClient {
         self.url = url.into();
     }
 
+    /// 获取当前连接状态
+    pub fn get_connection_state(&self) -> ConnectionState {
+        if let Ok(state) = self.connection_state.lock() {
+            state.clone()
+        } else {
+            warn!("获取连接状态锁失败，返回断开状态");
+            ConnectionState::Disconnected
+        }
+    }
+
+    /// 检查连接是否健康
+    pub fn is_connection_healthy(&self) -> bool {
+        let state = self.get_connection_state();
+        if state != ConnectionState::Connected {
+            return false;
+        }
+
+        // 检查最后消息时间
+        if let Ok(last_time) = self.last_message_time.lock() {
+            let elapsed = last_time.elapsed();
+            elapsed < Duration::from_secs(60) // 60秒内有消息认为健康
+        } else {
+            false
+        }
+    }
+
     /// 连接到WebSocket服务器
     pub async fn connect(&mut self) -> Result<Receiver<serde_json::Value>, Error> {
+        // 设置连接状态为连接中
+        if let Ok(mut state) = self.connection_state.lock() {
+            *state = ConnectionState::Connecting;
+        }
+
         let url_string = self.url.clone();
         let url = Url::parse(&url_string)
             .map_err(|e| Error::WebSocketError(format!("无效的WebSocket URL: {}", e)))?;
 
         let (ws_stream, _) = connect_async(url)
             .await
-            .map_err(|e| Error::WebSocketError(format!("连接WebSocket失败: {}", e)))?;
+            .map_err(|e| {
+                // 连接失败，设置状态为断开
+                if let Ok(mut state) = self.connection_state.lock() {
+                    *state = ConnectionState::Disconnected;
+                }
+                Error::WebSocketError(format!("连接WebSocket失败: {}", e))
+            })?;
 
         info!("已连接到OKX WebSocket服务器");
+
+        // 设置连接状态为已连接
+        if let Ok(mut state) = self.connection_state.lock() {
+            *state = ConnectionState::Connected;
+        }
 
         let (write, read) = ws_stream.split();
         let (tx_in, rx_in) = mpsc::channel::<WsMessage>(100);
@@ -128,11 +186,15 @@ impl OkxWebsocketClient {
         });
 
         // 消息接收+心跳任务
+        let last_message_time = self.last_message_time.clone();
+        let connection_state = self.connection_state.clone();
         let rx_task = tokio::spawn(Self::run_ws_with_heartbeat(
             read,
             tx_out.clone(),
             tx_in.clone(),
-            Duration::from_secs(15),
+            Duration::from_secs(5),
+            last_message_time,
+            connection_state,
         ));
 
         // 合并任务
@@ -180,6 +242,11 @@ impl OkxWebsocketClient {
 
     /// 关闭连接
     pub async fn close(&mut self) {
+        // 设置连接状态为断开
+        if let Ok(mut state) = self.connection_state.lock() {
+            *state = ConnectionState::Disconnected;
+        }
+
         // 发送关闭消息
         if let Some(tx) = &self.tx {
             let _ = tx.send(Message::Close(None)).await;
@@ -270,6 +337,8 @@ impl OkxWebsocketClient {
         tx_out: Sender<serde_json::Value>,
         tx_in: Sender<WsMessage>,
         heartbeat_interval: Duration,
+        last_message_time: Arc<Mutex<Instant>>,
+        connection_state: Arc<Mutex<ConnectionState>>,
     ) {
         let mut last_msg_time = Instant::now();
         let mut waiting_pong = false;
@@ -279,11 +348,19 @@ impl OkxWebsocketClient {
                 msg_result = read.next() => {
                     if let Some(res) = msg_result {
                         if let Err(_) = Self::handle_ws_message(
-                            res, &tx_out, &tx_in, &mut last_msg_time, &mut waiting_pong, &mut ping_sent_time
+                            res, &tx_out, &tx_in, &mut last_msg_time, &mut waiting_pong, &mut ping_sent_time, &last_message_time
                         ).await {
+                            // 连接断开，更新状态
+                            if let Ok(mut state) = connection_state.lock() {
+                                *state = ConnectionState::Disconnected;
+                            }
                             break;
                         }
                     } else {
+                        // 连接断开，更新状态
+                        if let Ok(mut state) = connection_state.lock() {
+                            *state = ConnectionState::Disconnected;
+                        }
                         break;
                     }
                 }
@@ -313,10 +390,15 @@ impl OkxWebsocketClient {
         last_msg_time: &mut Instant,
         waiting_pong: &mut bool,
         ping_sent_time: &mut Option<Instant>,
+        last_message_time: &Arc<Mutex<Instant>>,
     ) -> Result<(), ()> {
         match res {
             Ok(msg) => {
                 *last_msg_time = Instant::now();
+                // 更新全局最后消息时间
+                if let Ok(mut time) = last_message_time.lock() {
+                    *time = Instant::now();
+                }
                 match &msg {
                     WsMessage::Text(text) => {
                         debug!("收到WebSocket消息: {}", text);
@@ -382,6 +464,12 @@ impl OkxWebsocketClient {
 
     /// 发送WebSocket消息
     async fn send_message<T: Serialize>(&self, message: &T) -> Result<(), Error> {
+        // 检查连接状态
+        let state = self.get_connection_state();
+        if state != ConnectionState::Connected {
+            return Err(Error::WebSocketError(format!("连接已断开，无法发送消息")));
+        }
+
         if let Some(tx) = &self.tx {
             let message_str = serde_json::to_string(message).map_err(|e| Error::JsonError(e))?;
             debug!("发送WebSocket消息: {}", message_str);
@@ -399,39 +487,53 @@ impl OkxWebsocketClient {
         if self.reconnect_task.is_some() {
             return;
         }
-        let tx = self.tx.clone();
-        let last_ping_time = self.last_ping_time.clone();
-        let mut client = self.clone();
+
+        let connection_state = self.connection_state.clone();
+        let last_message_time = self.last_message_time.clone();
+
         self.reconnect_task = Some(tokio::spawn(async move {
             let mut interval = tokio::time::interval(Duration::from_secs(5));
+
             loop {
                 interval.tick().await;
-                let should_reconnect = {
-                    if let Ok(time) = last_ping_time.lock() {
-                        let elapsed = time.elapsed();
-                        elapsed > Duration::from_secs(30)
-                    } else {
-                        false
-                    }
+
+                let current_state = if let Ok(state) = connection_state.lock() {
+                    state.clone()
+                } else {
+                    ConnectionState::Disconnected
                 };
+
+                let should_reconnect = match current_state {
+                    ConnectionState::Disconnected => false, // 让外部处理重连
+                    ConnectionState::Connected => {
+                        // 检查消息超时
+                        if let Ok(last_time) = last_message_time.lock() {
+                            let elapsed = last_time.elapsed();
+                            if elapsed > Duration::from_secs(20) {
+                                // 设置为断开状态，让外部处理重连
+                                if let Ok(mut state) = connection_state.lock() {
+                                    *state = ConnectionState::Disconnected;
+                                }
+                                warn!("检测到消息超时，标记连接为断开状态");
+                            }
+                            false
+                        } else {
+                            false
+                        }
+                    }
+                    ConnectionState::Reconnecting => false, // 已在重连中
+                    ConnectionState::Connecting => false,   // 已在连接中
+                };
+
+                // 这个任务只负责监控，不执行重连
                 if should_reconnect {
-                    warn!("WebSocket连接已超过30秒未活动，尝试重连");
-                    if let Some(tx) = &tx {
-                        let _ = tx.send(Message::Close(None)).await;
-                    }
-                    match client.connect().await {
-                        Ok(_) => {
-                            info!("WebSocket重连成功");
-                        }
-                        Err(e) => {
-                            error!("WebSocket重连失败: {}", e);
-                            sleep(Duration::from_secs(5)).await;
-                        }
-                    }
+                    // 预留给未来扩展
                 }
             }
         }));
     }
+
+
 }
 
 impl Clone for OkxWebsocketClient {
@@ -446,6 +548,8 @@ impl Clone for OkxWebsocketClient {
             rx: None,
             connection_task: None,
             reconnect_task: None,
+            connection_state: self.connection_state.clone(),
+            last_message_time: self.last_message_time.clone(),
             last_ping_time: self.last_ping_time.clone(),
         }
     }

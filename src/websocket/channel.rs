@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::borrow::Cow;
 
 /// WebSocket通道类型
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -92,35 +93,35 @@ impl Args {
 
 impl ChannelType {
     /// 获取通道名称
-    pub fn as_str(&self) -> &str {
+    pub fn as_str(&self) -> Cow<str> {
         match self {
-            Self::Tickers => "tickers",
-            Self::Candle(interval) => interval,
-            Self::Books => "books",
-            Self::Books50L => "books-l2-tbt",
-            Self::BooksLite => "books5",
-            Self::Trades => "trades",
-            Self::Account => "account",
-            Self::Positions => "positions",
-            Self::Orders => "orders",
-            Self::AlgoOrders => "orders-algo",
-            Self::AdvancedAlgoOrders => "algo-advance",
-            Self::OrdersAlgo => "trades",
-            Self::Balance => "balance_and_position",
-            Self::PositionRisk => "positions-risk",
-            Self::BalanceAndPosition => "balance_and_position",
-            Self::Greeks => "greeks",
-            Self::DepositInfo => "deposit-info",
-            Self::Status => "status",
-            Self::FundingRate => "funding-rate",
-            Self::IndexCandle(interval) => interval,
-            Self::IndexTickers => "index-tickers",
-            Self::MarkPriceCandle(interval) => interval,
-            Self::MarkPrice => "mark-price",
-            Self::PriceLimit => "price-limit",
-            Self::EstimatedPrice => "estimated-price",
-            Self::BlockTickers => "block-tickers",
-            Self::Custom(name) => name,
+            Self::Tickers => Cow::Borrowed("tickers"),
+            Self::Candle(interval) => Cow::Owned(format!("candle{}", interval)),
+            Self::Books => Cow::Borrowed("books"),
+            Self::Books50L => Cow::Borrowed("books-l2-tbt"),
+            Self::BooksLite => Cow::Borrowed("books5"),
+            Self::Trades => Cow::Borrowed("trades"),
+            Self::Account => Cow::Borrowed("account"),
+            Self::Positions => Cow::Borrowed("positions"),
+            Self::Orders => Cow::Borrowed("orders"),
+            Self::AlgoOrders => Cow::Borrowed("orders-algo"),
+            Self::AdvancedAlgoOrders => Cow::Borrowed("algo-advance"),
+            Self::OrdersAlgo => Cow::Borrowed("trades"),
+            Self::Balance => Cow::Borrowed("balance_and_position"),
+            Self::PositionRisk => Cow::Borrowed("positions-risk"),
+            Self::BalanceAndPosition => Cow::Borrowed("balance_and_position"),
+            Self::Greeks => Cow::Borrowed("greeks"),
+            Self::DepositInfo => Cow::Borrowed("deposit-info"),
+            Self::Status => Cow::Borrowed("status"),
+            Self::FundingRate => Cow::Borrowed("funding-rate"),
+            Self::IndexCandle(interval) => Cow::Borrowed(interval),
+            Self::IndexTickers => Cow::Borrowed("index-tickers"),
+            Self::MarkPriceCandle(interval) => Cow::Borrowed(interval),
+            Self::MarkPrice => Cow::Borrowed("mark-price"),
+            Self::PriceLimit => Cow::Borrowed("price-limit"),
+            Self::EstimatedPrice => Cow::Borrowed("estimated-price"),
+            Self::BlockTickers => Cow::Borrowed("block-tickers"),
+            Self::Custom(name) => Cow::Borrowed(name),
         }
     }
 }
