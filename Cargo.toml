@@ -1,6 +1,6 @@
 [package]
 name = "okx"
-version = "0.1.8"
+version = "0.1.9"
 edition = "2021"
 authors = ["fairwic <chaoliushishangfaner@gmail.com>"]
 description = "OKX交易所API SDK"
@@ -44,4 +44,4 @@ env_logger = "0.11.1"
 [lib]
 path = "src/lib.rs"
 
-[workspace]
+# [workspace]

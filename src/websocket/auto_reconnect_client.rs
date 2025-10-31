@@ -8,6 +8,7 @@ use serde_json::Value;
 use tokio::sync::mpsc;
 use tokio::time::sleep;
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
+use tokio_tungstenite::tungstenite::Error as TungsteniteError;
 use url::Url;
 
 use crate::config::Credentials;
@@ -469,16 +470,26 @@ impl AutoReconnectWebsocketClient {
                             debug!("收到pong消息");
                             *last_message_time.lock().unwrap() = Instant::now();
                         }
-                        Some(Ok(Message::Close(_))) => {
-                            info!("WebSocket连接被服务器关闭");
+                        Some(Ok(Message::Close(close_frame))) => {
+                            if let Some(frame) = close_frame {
+                                info!("WebSocket连接被服务器关闭: code={}, reason={}", 
+                                    frame.code, frame.reason);
+                            } else {
+                                info!("WebSocket连接被服务器关闭（无关闭帧）");
+                            }
+                            // 立即更新连接状态，确保重连逻辑能及时触发
+                            *connection_state.lock().unwrap() = ConnectionState::Disconnected;
                             break;
                         }
                         Some(Err(e)) => {
-                            error!("WebSocket消息错误: {}", e);
+                            // 区分不同类型的错误，使用不同的日志级别
+                            Self::handle_websocket_error(&e, connection_state);
                             break;
                         }
                         None => {
-                            warn!("WebSocket流结束");
+                            warn!("WebSocket流结束（EOF）");
+                            // 立即更新连接状态
+                            *connection_state.lock().unwrap() = ConnectionState::Disconnected;
                             break;
                         }
                         _ => {
@@ -496,6 +507,68 @@ impl AutoReconnectWebsocketClient {
         }
 
         Ok(())
+    }
+
+    /// 处理WebSocket错误，根据错误类型进行分类和日志记录
+    fn handle_websocket_error(
+        error: &TungsteniteError,
+        connection_state: &Arc<Mutex<ConnectionState>>,
+    ) {
+        // 立即更新连接状态，确保重连逻辑能及时触发
+        *connection_state.lock().unwrap() = ConnectionState::Disconnected;
+
+        // 根据错误类型进行分类处理
+        match error {
+            TungsteniteError::ConnectionClosed => {
+                // 连接正常关闭，使用info级别
+                info!("WebSocket连接已关闭");
+            }
+            TungsteniteError::Protocol(ref protocol_error) => {
+                // 协议错误，可能是连接重置等情况
+                let error_msg = format!("{}", protocol_error);
+                if error_msg.contains("Connection reset without closing handshake") {
+                    // 连接重置错误：这是可恢复的错误，通常由网络问题或服务器端断开导致
+                    // 使用warn级别，因为这会被自动重连机制处理
+                    warn!("WebSocket连接被重置（无关闭握手）: {} - 将自动重连", protocol_error);
+                } else {
+                    // 其他协议错误
+                    error!("WebSocket协议错误: {}", protocol_error);
+                }
+            }
+            TungsteniteError::Io(ref io_error) => {
+                // IO错误，可能是网络问题
+                let error_kind = io_error.kind();
+                match error_kind {
+                    std::io::ErrorKind::ConnectionReset
+                    | std::io::ErrorKind::ConnectionAborted
+                    | std::io::ErrorKind::BrokenPipe => {
+                        warn!("WebSocket网络连接错误: {} - 将自动重连", io_error);
+                    }
+                    std::io::ErrorKind::TimedOut => {
+                        warn!("WebSocket连接超时: {} - 将自动重连", io_error);
+                    }
+                    _ => {
+                        error!("WebSocket IO错误: {}", io_error);
+                    }
+                }
+            }
+            TungsteniteError::Utf8 => {
+                // UTF-8编码错误，通常是可恢复的
+                warn!("WebSocket消息UTF-8编码错误: {}", error);
+            }
+            TungsteniteError::Tls(ref tls_error) => {
+                // TLS错误，通常需要重连
+                warn!("WebSocket TLS错误: {} - 将自动重连", tls_error);
+            }
+            TungsteniteError::Http(ref http_error) => {
+                // HTTP错误，可能是认证或协议问题
+                error!("WebSocket HTTP错误: {:?}", http_error);
+            }
+            _ => {
+                // 其他未知错误
+                error!("WebSocket未知错误: {}", error);
+            }
+        }
     }
 
     /// 发送订阅消息（静态方法）
