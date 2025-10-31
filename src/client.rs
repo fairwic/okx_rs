@@ -160,6 +160,7 @@ impl OkxClient {
                         .unwrap_or("未知错误")
                         .to_string()
                 } else {
+                    error!("解析错误信息失败: {}", response_body);
                     "解析错误信息失败".to_string()
                 };
 

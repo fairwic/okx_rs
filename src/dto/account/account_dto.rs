@@ -341,12 +341,9 @@ pub struct BalanceDetail {
     /// 质押币
     #[serde(rename = "collateralEnabled")]
     pub collateral_enabled: bool,
-    /// 质押风险
-    #[serde(rename = "collateralRisk")]
-    pub collateral_risk: String,
     /// 质押风险率
     #[serde(rename = "collateralRestrict")]
-    pub collateral_restrict: String,
+    pub collateral_restrict: bool,
 }
 
 /// 账户配置
