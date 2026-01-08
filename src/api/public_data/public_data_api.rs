@@ -3,7 +3,7 @@ use crate::api::API_PUBLIC_PATH;
 use crate::client::OkxClient;
 use crate::dto::market::market_dto::InstrumentOkxResDto;
 use crate::dto::public_data::public_data_dto::{
-    EconomicEventOkxRespDto, RateLimit, SystemStatus, SystemTime,
+    EconomicEventOkxRespDto, RateLimit, SystemStatus, SystemTime, FundingRateOkxRespDto, FundingRateHistoryOkxRespDto,
 };
 use crate::error::Error;
 use reqwest::Method;
@@ -147,6 +147,45 @@ impl OkxPublicData {
 
         self.client
             .send_request::<Vec<RateLimit>>(Method::GET, &path, "")
+            .await
+    }
+
+    /// 获取资金费率
+    pub async fn get_funding_rate(&self, inst_id: &str) -> Result<Vec<FundingRateOkxRespDto>, Error> {
+        let mut path = format!("{}/funding-rate", API_PUBLIC_PATH);
+        if !inst_id.is_empty() {
+             path.push_str(&format!("?instId={}", inst_id));
+        }
+
+        self.client
+            .send_request::<Vec<FundingRateOkxRespDto>>(Method::GET, &path, "")
+            .await
+    }
+
+    /// 获取历史资金费率
+    pub async fn get_funding_rate_history(
+        &self,
+        inst_id: &str,
+        before: Option<i64>,
+        after: Option<i64>,
+        limit: Option<i64>,
+    ) -> Result<Vec<FundingRateHistoryOkxRespDto>, Error> {
+        let mut path = format!("{}/funding-rate-history?instId={}", API_PUBLIC_PATH, inst_id);
+
+        if let Some(b) = before {
+            path.push_str(&format!("&before={}", b));
+        }
+
+        if let Some(a) = after {
+            path.push_str(&format!("&after={}", a));
+        }
+
+        if let Some(l) = limit {
+            path.push_str(&format!("&limit={}", l));
+        }
+
+        self.client
+            .send_request::<Vec<FundingRateHistoryOkxRespDto>>(Method::GET, &path, "")
             .await
     }
 }

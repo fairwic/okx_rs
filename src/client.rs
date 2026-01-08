@@ -44,6 +44,7 @@ pub struct OkxClient {
 impl OkxClient {
     /// 创建一个新的OKX客户端
     pub fn new(credentials: Credentials) -> Result<Self, Error> {
+        // 避免 macOS system-configuration 在沙箱环境下探测系统代理导致 panic
         let client = Client::builder()
             .timeout(Duration::from_millis(CONFIG.api_timeout_ms))
             .build()

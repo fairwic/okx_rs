@@ -100,3 +100,78 @@ pub struct RateLimit {
     #[serde(rename = "intervalSec")]
     pub interval_sec: String,
 }
+
+/// 资金费率响应DTO
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FundingRateOkxRespDto {
+    /// 产品类型
+    #[serde(rename = "instType")]
+    pub inst_type: String,
+    /// 产品ID
+    #[serde(rename = "instId")]
+    pub inst_id: String,
+    /// 资金费收取逻辑
+    pub method: String,
+    /// 公式类型
+    #[serde(rename = "formulaType")]
+    pub formula_type: Option<String>,
+    /// 资金费率
+    #[serde(rename = "fundingRate")]
+    pub funding_rate: String,
+    /// 下一期预测资金费率
+    #[serde(rename = "nextFundingRate")]
+    pub next_funding_rate: String,
+    /// 资金费时间
+    #[serde(rename = "fundingTime")]
+    pub funding_time: String,
+    /// 下一期资金费时间
+    #[serde(rename = "nextFundingTime")]
+    pub next_funding_time: String,
+    /// 资金费率下限
+    #[serde(rename = "minFundingRate")]
+    pub min_funding_rate: String,
+    /// 资金费率上限
+    #[serde(rename = "maxFundingRate")]
+    pub max_funding_rate: String,
+    /// 利率
+    #[serde(rename = "interestRate")]
+    pub interest_rate: Option<String>,
+    /// 深度加权金额
+    #[serde(rename = "impactValue")]
+    pub impact_value: Option<String>,
+    /// 资金费率结算状态
+    #[serde(rename = "settState")]
+    pub sett_state: Option<String>,
+    /// 结算资金费率
+    #[serde(rename = "settFundingRate")]
+    pub sett_funding_rate: Option<String>,
+    /// 溢价指数
+    pub premium: Option<String>,
+    /// 数据更新时间
+    pub ts: String,
+}
+
+/// 历史资金费率响应DTO
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FundingRateHistoryOkxRespDto {
+    /// 产品类型
+    #[serde(rename = "instType")]
+    pub inst_type: String,
+    /// 产品ID
+    #[serde(rename = "instId")]
+    pub inst_id: String,
+    /// 公式类型
+    #[serde(rename = "formulaType")]
+    pub formula_type: Option<String>,
+    /// 预计资金费率
+    #[serde(rename = "fundingRate")]
+    pub funding_rate: String,
+    /// 实际资金费率
+    #[serde(rename = "realizedRate")]
+    pub realized_rate: String,
+    /// 资金费时间
+    #[serde(rename = "fundingTime")]
+    pub funding_time: String,
+    /// 资金费收取逻辑
+    pub method: String,
+}
