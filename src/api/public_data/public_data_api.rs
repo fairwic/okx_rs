@@ -156,6 +156,7 @@ impl OkxPublicData {
         if !inst_id.is_empty() {
              path.push_str(&format!("?instId={}", inst_id));
         }
+        
 
         self.client
             .send_request::<Vec<FundingRateOkxRespDto>>(Method::GET, &path, "")
