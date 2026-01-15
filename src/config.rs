@@ -7,8 +7,10 @@ use std::sync::Once;
 pub const DEFAULT_API_URL: &str = "https://www.okx.com";
 
 /// OKX WebSocket的默认URL
-pub const DEFAULT_WEBSOCKET_URL: &str = "wss://ws.okx.com:8443/ws/v5/public";
-pub const DEFAULT_PRIVATE_WEBSOCKET_URL: &str = "wss://ws.okx.com:8443/ws/v5/business";
+// Note: ws.okx.com:8443 may be blocked/unavailable in some networks; 443 generally works.
+pub const DEFAULT_WEBSOCKET_URL: &str = "wss://ws.okx.com/ws/v5/public";
+pub const DEFAULT_PRIVATE_WEBSOCKET_URL: &str = "wss://ws.okx.com/ws/v5/private";
+pub const DEFAULT_BUSINESS_WEBSOCKET_URL: &str = "wss://ws.okx.com/ws/v5/business";
 
 /// OKX API超时配置（毫秒）
 pub const DEFAULT_API_TIMEOUT_MS: u64 = 5000;
@@ -21,6 +23,9 @@ static INIT_ENV: Once = Once::new();
 
 /// 全局配置
 pub static CONFIG: Lazy<Config> = Lazy::new(|| {
+    // Ensure .env is loaded before reading env vars
+    init_env();
+
     let mut config = Config::default();
 
     if let Ok(api_url) = env::var("OKX_API_URL") {
@@ -29,8 +34,20 @@ pub static CONFIG: Lazy<Config> = Lazy::new(|| {
     if let Ok(ws_url) = env::var("OKX_WEBSOCKET_URL") {
         config.websocket_url = ws_url;
     }
+    if let Ok(ws_url) = env::var("WS_PUBLIC_URL") {
+        config.websocket_url = ws_url;
+    }
     if let Ok(private_ws_url) = env::var("OKX_PRIVATE_WEBSOCKET_URL") {
         config.private_websocket_url = private_ws_url;
+    }
+    if let Ok(private_ws_url) = env::var("WS_PRIVATE_URL") {
+        config.private_websocket_url = private_ws_url;
+    }
+    if let Ok(business_ws_url) = env::var("OKX_BUSINESS_WEBSOCKET_URL") {
+        config.business_websocket_url = business_ws_url;
+    }
+    if let Ok(business_ws_url) = env::var("WS_BUSINESS_URL") {
+        config.business_websocket_url = business_ws_url;
     }
     if let Ok(timeout) = env::var("OKX_API_TIMEOUT_MS").map(|v| v.parse::<u64>()) {
         if let Ok(timeout) = timeout {
@@ -58,6 +75,8 @@ pub struct Config {
     pub websocket_url: String,
     /// 私有WebSocket URL
     pub private_websocket_url: String,
+    /// 业务WebSocket URL
+    pub business_websocket_url: String,
     /// API超时时间（毫秒）
     pub api_timeout_ms: u64,
     /// 请求有效时间（毫秒）
@@ -72,6 +91,7 @@ impl Default for Config {
             api_url: DEFAULT_API_URL.to_string(),
             websocket_url: DEFAULT_WEBSOCKET_URL.to_string(),
             private_websocket_url: DEFAULT_PRIVATE_WEBSOCKET_URL.to_string(),
+            business_websocket_url: DEFAULT_BUSINESS_WEBSOCKET_URL.to_string(),
             api_timeout_ms: DEFAULT_API_TIMEOUT_MS,
             request_expiration_ms: DEFAULT_REQUEST_EXPIRATION_MS,
             is_simulated_trading: "1".into(),
@@ -100,6 +120,12 @@ impl Config {
     /// 设置私有WebSocket URL
     pub fn with_private_websocket_url(mut self, private_websocket_url: impl Into<String>) -> Self {
         self.private_websocket_url = private_websocket_url.into();
+        self
+    }
+
+    /// 设置业务WebSocket URL
+    pub fn with_business_websocket_url(mut self, business_websocket_url: impl Into<String>) -> Self {
+        self.business_websocket_url = business_websocket_url.into();
         self
     }
 

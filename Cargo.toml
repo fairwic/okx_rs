@@ -17,7 +17,7 @@ tokio = { version = "1.37.0", features = [
     "macros",
     "full",
 ] }
-reqwest = { version = "0.11.27", features = ["json"] }
+reqwest = { version = "0.11.27", features = ["json", "rustls"] }
 serde = { version = "1.0.202", features = ["derive"] }
 serde_json = "1.0.117"
 thiserror = "1.0.57"
@@ -27,7 +27,7 @@ base64 = "0.21.7"
 hmac = "0.12.1"
 sha2 = "0.10.8"
 futures = "0.3.30"
-tokio-tungstenite = { version = "0.21.0", features = ["native-tls"] }
+tokio-tungstenite = { version = "0.28", features = ["rustls-tls-webpki-roots"] }
 anyhow = "1.0.79"
 url = "2.5.0"
 config = "0.14.0"
@@ -44,4 +44,4 @@ env_logger = "0.11.1"
 [lib]
 path = "src/lib.rs"
 # 当需要使用workspace时，需要注释掉workspace
-[workspace]
+# [workspace]

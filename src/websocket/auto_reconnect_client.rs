@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::env;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -7,15 +8,18 @@ use log::{debug, error, info, warn};
 use serde_json::Value;
 use tokio::sync::mpsc;
 use tokio::time::sleep;
-use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
 use tokio_tungstenite::tungstenite::Error as TungsteniteError;
+use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
 use url::Url;
 
-use crate::config::Credentials;
+use crate::config::{Credentials, CONFIG};
 use crate::error::Error;
 use crate::utils;
 use crate::websocket::channel::{Args, ChannelType};
-use crate::websocket::models::{WebSocketAuth, WebSocketLoginRequest, WebSocketOperation, WebSocketRequest, WebSocketSubscription};
+use crate::websocket::models::{
+    WebSocketAuth, WebSocketLoginRequest, WebSocketOperation, WebSocketRequest,
+    WebSocketSubscription,
+};
 
 /// 连接状态枚举
 #[derive(Debug, Clone, PartialEq)]
@@ -50,7 +54,8 @@ impl Default for ReconnectConfig {
         Self {
             enabled: true,
             interval: 3,
-            max_attempts: 100,
+            // 默认无限重试
+            max_attempts: u32::MAX,
             backoff_factor: 1.5,
             max_backoff: 6,
             heartbeat_interval: 3,
@@ -61,8 +66,8 @@ impl Default for ReconnectConfig {
 
 /// 自动重连WebSocket客户端
 pub struct AutoReconnectWebsocketClient {
-    /// WebSocket连接URL
-    url: String,
+    /// WebSocket连接URL池（主+备用）
+    urls: Vec<String>,
     /// 是否使用私有WS (需要认证)
     is_private: bool,
     /// 认证凭证
@@ -81,29 +86,116 @@ pub struct AutoReconnectWebsocketClient {
     ws_sender: Arc<Mutex<Option<mpsc::UnboundedSender<Message>>>>,
     /// 是否正在运行
     is_running: Arc<Mutex<bool>>,
+    /// 当前使用的URL索引
+    current_url_idx: Arc<Mutex<usize>>,
 }
 
 impl AutoReconnectWebsocketClient {
+    /// 构建主+备用的URL池
+    fn build_url_pool(primary: &str) -> Vec<String> {
+        fn push_candidate(urls: &mut Vec<String>, candidate: &str) {
+            let trimmed = candidate.trim();
+            if trimmed.is_empty() {
+                return;
+            }
+            if let Ok(url) = Url::parse(trimmed) {
+                if url.host_str().is_none() {
+                    return;
+                }
+                let url_str = url.to_string();
+                if !urls.contains(&url_str) {
+                    urls.push(url_str);
+                }
+            }
+        }
+
+        let mut urls = Vec::new();
+
+        // 部分网络下 8443 端口可能不可用（会出现 tls handshake eof），优先尝试 443
+        if let Ok(parsed) = Url::parse(primary) {
+            let path = parsed.path().to_string();
+            let primary_host = parsed.host_str().unwrap_or_default().to_string();
+            let primary_port = parsed.port();
+            let scheme = parsed.scheme().to_string();
+
+            let mut hosts = Vec::new();
+            if !primary_host.is_empty() {
+                hosts.push(primary_host.clone());
+            }
+            for host in ["ws.okx.com"] {
+                if host != primary_host && !hosts.contains(&host.to_string()) {
+                    hosts.push(host.to_string());
+                }
+            }
+
+            let ports: Vec<Option<u16>> = match (scheme.as_str(), primary_port) {
+                ("wss", Some(8443)) => vec![None, Some(443), Some(8443)],
+                ("wss", Some(443)) => vec![None, Some(443)],
+                ("wss", None) => vec![None, Some(443)],
+                (_, Some(p)) => vec![Some(p), None],
+                (_, None) => vec![None],
+            };
+
+            for host in hosts {
+                for port in &ports {
+                    let mut candidate = parsed.clone();
+                    if candidate.set_host(Some(&host)).is_err() {
+                        continue;
+                    }
+                    let _ = candidate.set_port(*port);
+                    candidate.set_path(&path);
+                    push_candidate(&mut urls, candidate.as_str());
+                }
+            }
+        } else {
+            push_candidate(&mut urls, primary);
+        }
+
+        // 读取自定义备用节点（逗号分隔完整URL）
+        if let Ok(extra) = env::var("OKX_WEBSOCKET_FALLBACKS") {
+            for item in extra.split(',') {
+                push_candidate(&mut urls, item);
+            }
+        }
+
+        if urls.is_empty() {
+            urls.push(primary.to_string());
+        }
+
+        urls
+    }
+
     /// 创建新的公共频道客户端
     pub fn new_public() -> Self {
-        Self::new_with_config("wss://ws.okx.com:8443/ws/v5/public",None, ReconnectConfig::default())
+        Self::new_with_config(&CONFIG.websocket_url, None, ReconnectConfig::default())
     }
 
     /// 创建新的私有频道客户端
     pub fn new_private(credentials: Credentials) -> Self {
-        Self::new_with_config("wss://ws.okx.com:8443/ws/v5/private",Some(credentials), ReconnectConfig::default())
+        Self::new_with_config(
+            &CONFIG.private_websocket_url,
+            Some(credentials),
+            ReconnectConfig::default(),
+        )
     }
     /// 创建新的交易频道客户端
     pub fn new_business(credentials: Credentials) -> Self {
-        Self::new_with_config("wss://ws.okx.com:8443/ws/v5/business",Some(credentials), ReconnectConfig::default())
+        Self::new_with_config(
+            &CONFIG.business_websocket_url,
+            Some(credentials),
+            ReconnectConfig::default(),
+        )
     }
 
-
-
     /// 使用自定义配置创建客户端
-    pub fn new_with_config(url:&str,credentials: Option<Credentials>, config: ReconnectConfig) -> Self {
+    pub fn new_with_config(
+        url: &str,
+        credentials: Option<Credentials>,
+        config: ReconnectConfig,
+    ) -> Self {
+        let urls = Self::build_url_pool(url);
         Self {
-            url: url.to_string(),
+            urls,
             is_private: credentials.is_some(),
             credentials,
             connection_state: Arc::new(Mutex::new(ConnectionState::Disconnected)),
@@ -113,6 +205,7 @@ impl AutoReconnectWebsocketClient {
             message_sender: Arc::new(Mutex::new(None)),
             ws_sender: Arc::new(Mutex::new(None)),
             is_running: Arc::new(Mutex::new(false)),
+            current_url_idx: Arc::new(Mutex::new(0)),
         }
     }
 
@@ -120,7 +213,9 @@ impl AutoReconnectWebsocketClient {
     pub async fn start(&self) -> Result<mpsc::UnboundedReceiver<Value>, Error> {
         let mut is_running = self.is_running.lock().unwrap();
         if *is_running {
-            return Err(Error::WebSocketError("Client is already running".to_string()));
+            return Err(Error::WebSocketError(
+                "Client is already running".to_string(),
+            ));
         }
 
         let (tx, rx) = mpsc::unbounded_channel();
@@ -145,8 +240,12 @@ impl AutoReconnectWebsocketClient {
 
     /// 订阅频道
     pub async fn subscribe(&self, channel: ChannelType, args: Args) -> Result<(), Error> {
-        let subscription_key = format!("{:?}_{}", channel, args.inst_id.as_ref().unwrap_or(&"".to_string()));
-        
+        let subscription_key = format!(
+            "{:?}_{}",
+            channel,
+            args.inst_id.as_ref().unwrap_or(&"".to_string())
+        );
+
         // 记录订阅信息
         {
             let mut subscriptions = self.subscriptions.lock().unwrap();
@@ -155,7 +254,8 @@ impl AutoReconnectWebsocketClient {
 
         // 如果已连接，立即发送订阅请求
         if *self.connection_state.lock().unwrap() == ConnectionState::Connected {
-            self.send_subscription_request(&channel, &args, "subscribe").await?;
+            self.send_subscription_request(&channel, &args, "subscribe")
+                .await?;
         }
 
         debug!("已添加订阅: {:?}", channel);
@@ -164,8 +264,12 @@ impl AutoReconnectWebsocketClient {
 
     /// 取消订阅频道
     pub async fn unsubscribe(&self, channel: ChannelType, args: Args) -> Result<(), Error> {
-        let subscription_key = format!("{:?}_{}", channel, args.inst_id.as_ref().unwrap_or(&"".to_string()));
-        
+        let subscription_key = format!(
+            "{:?}_{}",
+            channel,
+            args.inst_id.as_ref().unwrap_or(&"".to_string())
+        );
+
         // 移除订阅记录
         {
             let mut subscriptions = self.subscriptions.lock().unwrap();
@@ -174,7 +278,8 @@ impl AutoReconnectWebsocketClient {
 
         // 如果已连接，发送取消订阅请求
         if *self.connection_state.lock().unwrap() == ConnectionState::Connected {
-            self.send_subscription_request(&channel, &args, "unsubscribe").await?;
+            self.send_subscription_request(&channel, &args, "unsubscribe")
+                .await?;
         }
 
         debug!("已取消订阅: {:?}", channel);
@@ -205,7 +310,7 @@ impl AutoReconnectWebsocketClient {
 
     /// 启动连接管理任务
     async fn start_connection_manager(&self, tx: mpsc::UnboundedSender<Value>) {
-        let url = self.url.clone();
+        let urls = self.urls.clone();
         let is_private = self.is_private;
         let credentials = self.credentials.clone();
         let connection_state = self.connection_state.clone();
@@ -214,12 +319,24 @@ impl AutoReconnectWebsocketClient {
         let is_running = self.is_running.clone();
         let config = self.reconnect_config.clone();
         let ws_sender = self.ws_sender.clone();
+        let current_url_idx = self.current_url_idx.clone();
 
         tokio::spawn(async move {
             let mut reconnect_attempts = 0;
             let mut backoff_delay = config.interval;
 
+            info!("WebSocket候选节点: {:?}", urls);
             while *is_running.lock().unwrap() {
+                let url = {
+                    let idx = *current_url_idx.lock().unwrap();
+                    urls.get(idx).cloned().unwrap_or_else(|| urls[0].clone())
+                };
+                info!(
+                    "尝试连接OKX WebSocket: {} (attempt={}, backoff={}s)",
+                    url,
+                    reconnect_attempts + 1,
+                    backoff_delay
+                );
                 // 尝试连接
                 match Self::establish_connection(&url, is_private, &credentials).await {
                     Ok((ws_stream, _)) => {
@@ -266,7 +383,8 @@ impl AutoReconnectWebsocketClient {
                             &connection_state,
                             &last_message_time,
                             &is_running,
-                        ).await;
+                        )
+                        .await;
 
                         // 停止心跳任务
                         heartbeat_task.abort();
@@ -282,7 +400,7 @@ impl AutoReconnectWebsocketClient {
                         *connection_state.lock().unwrap() = ConnectionState::Disconnected;
                     }
                     Err(e) => {
-                        error!("WebSocket连接失败: {}", e);
+                        error!("WebSocket连接失败 ({}): {}", url, e);
                         *connection_state.lock().unwrap() = ConnectionState::Disconnected;
                     }
                 }
@@ -295,10 +413,19 @@ impl AutoReconnectWebsocketClient {
                 if config.enabled && reconnect_attempts < config.max_attempts {
                     reconnect_attempts += 1;
                     *connection_state.lock().unwrap() = ConnectionState::Reconnecting;
-                    
-                    info!("准备重连 (第{}次)，{}秒后重试", reconnect_attempts, backoff_delay);
+                    if urls.len() > 1 {
+                        let mut idx = current_url_idx.lock().unwrap();
+                        *idx = (*idx + 1) % urls.len();
+                        info!("切换备用WebSocket节点: {}", urls[*idx]);
+                    }
+                    error!(
+                        "准备重连 (第{}次)，{}秒后重试 (当前节点: {})",
+                        reconnect_attempts,
+                        backoff_delay,
+                        urls[*current_url_idx.lock().unwrap()]
+                    );
                     sleep(Duration::from_secs(backoff_delay)).await;
-                    
+
                     // 指数退避
                     backoff_delay = ((backoff_delay as f64 * config.backoff_factor) as u64)
                         .min(config.max_backoff);
@@ -317,10 +444,19 @@ impl AutoReconnectWebsocketClient {
         url: &str,
         is_private: bool,
         credentials: &Option<Credentials>,
-    ) -> Result<(tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>, tokio_tungstenite::tungstenite::handshake::client::Response), Error> {
-        let url = Url::parse(url).map_err(|e| Error::WebSocketError(format!("Invalid URL: {}", e)))?;
-        
-        let (ws_stream, response) = connect_async(url)
+    ) -> Result<
+        (
+            tokio_tungstenite::WebSocketStream<
+                tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
+            >,
+            tokio_tungstenite::tungstenite::handshake::client::Response,
+        ),
+        Error,
+    > {
+        let url =
+            Url::parse(url).map_err(|e| Error::WebSocketError(format!("Invalid URL: {}", e)))?;
+
+        let (ws_stream, response) = connect_async(url.as_str())
             .await
             .map_err(|e| Error::WebSocketError(format!("Connection failed: {}", e)))?;
 
@@ -329,7 +465,9 @@ impl AutoReconnectWebsocketClient {
             if let Some(creds) = credentials {
                 Self::authenticate(&ws_stream, creds).await?;
             } else {
-                return Err(Error::WebSocketError("Private channel requires credentials".to_string()));
+                return Err(Error::WebSocketError(
+                    "Private channel requires credentials".to_string(),
+                ));
             }
         }
 
@@ -338,7 +476,9 @@ impl AutoReconnectWebsocketClient {
 
     /// 进行WebSocket认证
     async fn authenticate(
-        _ws_stream: &tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>,
+        _ws_stream: &tokio_tungstenite::WebSocketStream<
+            tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
+        >,
         credentials: &Credentials,
     ) -> Result<(), Error> {
         let timestamp = utils::generate_timestamp_websocket();
@@ -361,8 +501,8 @@ impl AutoReconnectWebsocketClient {
             }],
         };
 
-        let login_message = serde_json::to_string(&login_request)
-            .map_err(|e| Error::JsonError(e))?;
+        let login_message =
+            serde_json::to_string(&login_request).map_err(|e| Error::JsonError(e))?;
 
         // 发送认证消息
         // 注意：这里需要修改为可变引用，但为了简化示例，我们先跳过实际发送
@@ -381,7 +521,9 @@ impl AutoReconnectWebsocketClient {
             debug!("重新订阅频道: {} - {:?}", key, channel);
 
             // 构建订阅请求
-            if let Err(e) = Self::send_subscription_message(&channel, &args, "subscribe", ws_sender).await {
+            if let Err(e) =
+                Self::send_subscription_message(&channel, &args, "subscribe", ws_sender).await
+            {
                 error!("重新订阅频道失败: {}", e);
             }
         }
@@ -423,7 +565,7 @@ impl AutoReconnectWebsocketClient {
 
                 // 发送ping消息
                 if let Some(sender) = ws_sender.lock().unwrap().as_ref() {
-                    if let Err(e) = sender.send(Message::Ping(vec![])) {
+                    if let Err(e) = sender.send(Message::Ping(Vec::new().into())) {
                         warn!("发送心跳ping失败: {}", e);
                         *connection_state.lock().unwrap() = ConnectionState::Disconnected;
                         break;
@@ -441,7 +583,11 @@ impl AutoReconnectWebsocketClient {
 
     /// 处理WebSocket消息
     async fn handle_messages(
-        mut ws_stream: futures::stream::SplitStream<tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>>,
+        mut ws_stream: futures::stream::SplitStream<
+            tokio_tungstenite::WebSocketStream<
+                tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
+            >,
+        >,
         tx: &mpsc::UnboundedSender<Value>,
         connection_state: &Arc<Mutex<ConnectionState>>,
         last_message_time: &Arc<Mutex<Instant>>,
@@ -453,7 +599,7 @@ impl AutoReconnectWebsocketClient {
                     match message {
                         Some(Ok(Message::Text(text))) => {
                             *last_message_time.lock().unwrap() = Instant::now();
-                            
+
                             if let Ok(value) = serde_json::from_str::<Value>(&text) {
                                 if tx.send(value).is_err() {
                                     warn!("消息发送失败，接收器可能已关闭");
@@ -472,7 +618,7 @@ impl AutoReconnectWebsocketClient {
                         }
                         Some(Ok(Message::Close(close_frame))) => {
                             if let Some(frame) = close_frame {
-                                info!("WebSocket连接被服务器关闭: code={}, reason={}", 
+                                info!("WebSocket连接被服务器关闭: code={}, reason={}",
                                     frame.code, frame.reason);
                             } else {
                                 info!("WebSocket连接被服务器关闭（无关闭帧）");
@@ -529,7 +675,10 @@ impl AutoReconnectWebsocketClient {
                 if error_msg.contains("Connection reset without closing handshake") {
                     // 连接重置错误：这是可恢复的错误，通常由网络问题或服务器端断开导致
                     // 使用warn级别，因为这会被自动重连机制处理
-                    warn!("WebSocket连接被重置（无关闭握手）: {} - 将自动重连", protocol_error);
+                    warn!(
+                        "WebSocket连接被重置（无关闭握手）: {} - 将自动重连",
+                        protocol_error
+                    );
                 } else {
                     // 其他协议错误
                     error!("WebSocket协议错误: {}", protocol_error);
@@ -552,7 +701,7 @@ impl AutoReconnectWebsocketClient {
                     }
                 }
             }
-            TungsteniteError::Utf8 => {
+            TungsteniteError::Utf8(_) => {
                 // UTF-8编码错误，通常是可恢复的
                 warn!("WebSocket消息UTF-8编码错误: {}", error);
             }
@@ -596,12 +745,11 @@ impl AutoReconnectWebsocketClient {
             args: vec![subscription],
         };
 
-        let message = serde_json::to_string(&request)
-            .map_err(|e| Error::JsonError(e))?;
+        let message = serde_json::to_string(&request).map_err(|e| Error::JsonError(e))?;
         debug!("发布{}请求: {}", operation, message);
         // 通过WebSocket发送器发送消息
         if let Some(sender) = ws_sender.lock().unwrap().as_ref() {
-            let ws_message = Message::Text(message);
+            let ws_message = Message::Text(message.into());
             if let Err(_) = sender.send(ws_message) {
                 return Err(Error::ConnectionError("无法发送订阅请求".to_string()));
             }
@@ -627,7 +775,7 @@ impl AutoReconnectWebsocketClient {
 impl Clone for AutoReconnectWebsocketClient {
     fn clone(&self) -> Self {
         Self {
-            url: self.url.clone(),
+            urls: self.urls.clone(),
             is_private: self.is_private,
             credentials: self.credentials.clone(),
             connection_state: self.connection_state.clone(),
@@ -637,6 +785,7 @@ impl Clone for AutoReconnectWebsocketClient {
             message_sender: self.message_sender.clone(),
             ws_sender: self.ws_sender.clone(),
             is_running: self.is_running.clone(),
+            current_url_idx: self.current_url_idx.clone(),
         }
     }
 }

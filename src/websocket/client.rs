@@ -149,7 +149,7 @@ impl OkxWebsocketClient {
         let url = Url::parse(&url_string)
             .map_err(|e| Error::WebSocketError(format!("无效的WebSocket URL: {}", e)))?;
 
-        let (ws_stream, _) = connect_async(url)
+        let (ws_stream, _) = connect_async(url.as_str())
             .await
             .map_err(|e| {
                 // 连接失败，设置状态为断开
@@ -364,7 +364,7 @@ impl OkxWebsocketClient {
                 }
                 _ = sleep(heartbeat_interval) => {
                     if !waiting_pong {
-                        if let Err(e) = tx_in.send(WsMessage::Text("ping".to_string())).await {
+                        if let Err(e) = tx_in.send(WsMessage::Text("ping".into())).await {
                             error!("发送Ping消息失败: {}", e);
                             break;
                         }
@@ -471,7 +471,7 @@ impl OkxWebsocketClient {
         if let Some(tx) = &self.tx {
             let message_str = serde_json::to_string(message).map_err(|e| Error::JsonError(e))?;
             debug!("发送WebSocket消息: {}", message_str);
-            tx.send(Message::Text(message_str))
+            tx.send(Message::Text(message_str.into()))
                 .await
                 .map_err(|e| Error::WebSocketError(format!("发送WebSocket消息失败: {}", e)))?;
             Ok(())
