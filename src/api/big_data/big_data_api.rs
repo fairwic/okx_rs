@@ -4,7 +4,6 @@ use crate::api::api_trait::OkxApiTrait;
 use crate::client::{OkxApiResponse, OkxClient};
 use crate::dto::big_data::*;
 use crate::Error;
-use log::debug;
 
 pub struct OkxBigData {
     client: OkxClient,

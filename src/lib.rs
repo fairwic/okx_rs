@@ -14,7 +14,6 @@ pub mod websocket;
 /// OKX SDK的版本
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-use crate::dto::common;
 pub use api::{
     account::OkxAccount, asset::OkxAsset, big_data::OkxBigData, market::OkxMarket,
     public_data::OkxPublicData, trade::OkxTrade, websocket::OkxWebsocketApi,

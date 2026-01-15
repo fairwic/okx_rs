@@ -1,16 +1,12 @@
 use crate::api::api_trait::OkxApiTrait;
 use crate::api::API_ACCOUNT_PATH;
 use crate::client::OkxClient;
-use crate::config::Credentials;
 use crate::dto::account::account_dto::{
     AccountConfig, AccountRisk, Balance, Position, SetLeverageRequest, TradingSwapNumResponseData,
 };
 use crate::dto::trade::trade_dto::PositionRespDto;
 use crate::error::Error;
 use reqwest::Method;
-use serde_json::json;
-use std::env;
-use tokio_tungstenite::tungstenite::client;
 
 /// OKX账户API
 /// 提供账户相关的API访问

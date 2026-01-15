@@ -2,7 +2,6 @@ use crate::api::api_trait::OkxApiTrait;
 use crate::client::OkxClient;
 use crate::enums::language_enums::Language;
 use crate::Error;
-use log::debug;
 use reqwest::Method;
 use serde::{Deserialize, Serialize};
 

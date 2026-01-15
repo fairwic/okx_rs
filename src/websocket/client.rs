@@ -6,15 +6,13 @@ use futures::Stream;
 use futures::{SinkExt, StreamExt};
 use log::{debug, error, info, warn};
 use reqwest::Method;
-use serde::{Deserialize, Serialize};
-use serde_json::json;
-use tokio::net::TcpStream;
+use serde::Serialize;
 use tokio::sync::mpsc::{self, Receiver, Sender};
 use tokio::task::JoinHandle;
 use tokio::time::sleep;
 use tokio_tungstenite::tungstenite::Error as WsError;
 use tokio_tungstenite::{
-    connect_async, tungstenite::protocol::Message, MaybeTlsStream, WebSocketStream,
+    connect_async, tungstenite::protocol::Message,
 };
 use url::Url;
 

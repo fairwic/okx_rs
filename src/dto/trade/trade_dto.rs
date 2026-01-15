@@ -1,6 +1,5 @@
 use crate::dto::common::{MarginMode, OrderType, PositionSide, Side};
 use crate::dto::EnumToStrTrait;
-use core::fmt::{Display, Formatter};
 use serde::{Deserialize, Serialize};
 ///保证金模式
 pub enum TdModeEnum {

@@ -93,7 +93,7 @@ impl Args {
 
 impl ChannelType {
     /// 获取通道名称
-    pub fn as_str(&self) -> Cow<str> {
+    pub fn as_str(&self) -> Cow<'_, str> {
         match self {
             Self::Tickers => Cow::Borrowed("tickers"),
             Self::Candle(interval) => Cow::Owned(format!("candle{}", interval)),

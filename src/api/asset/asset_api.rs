@@ -84,7 +84,7 @@ impl OkxAsset {
         transfer_req: &TransferOkxReqDto,
     ) -> Result<serde_json::Value, Error> {
         let path = format!("{}/transfer", API_ASSET_PATH);
-        let mut body = json!(transfer_req);
+        let body = json!(transfer_req);
         println!("body: {:?}", body);
         let body_str = serde_json::to_string(&body).map_err(Error::JsonError)?;
         self.client
