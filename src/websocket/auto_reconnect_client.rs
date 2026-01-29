@@ -211,16 +211,18 @@ impl AutoReconnectWebsocketClient {
 
     /// 启动客户端并返回消息接收器
     pub async fn start(&self) -> Result<mpsc::UnboundedReceiver<Value>, Error> {
-        let mut is_running = self.is_running.lock().unwrap();
-        if *is_running {
-            return Err(Error::WebSocketError(
-                "Client is already running".to_string(),
-            ));
-        }
-
         let (tx, rx) = mpsc::unbounded_channel();
-        *self.message_sender.lock().unwrap() = Some(tx.clone());
-        *is_running = true;
+
+        {
+            let mut is_running = self.is_running.lock().unwrap();
+            if *is_running {
+                return Err(Error::WebSocketError(
+                    "Client is already running".to_string(),
+                ));
+            }
+            *self.message_sender.lock().unwrap() = Some(tx.clone());
+            *is_running = true;
+        } // Drop the guard here to ensure Future is Send
 
         // 启动连接管理任务
         self.start_connection_manager(tx).await;

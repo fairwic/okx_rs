@@ -116,3 +116,25 @@ pub struct InstrumentOkxResDto {
     /// 产品状态
     pub state: String,
 }
+
+/// 成交数据 (Trade)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TradeOkxResDto {
+    /// 产品ID
+    #[serde(rename = "instId")]
+    pub inst_id: String,
+    /// 成交ID
+    #[serde(rename = "tradeId")]
+    pub trade_id: String,
+    /// 成交价格
+    #[serde(rename = "px")]
+    pub px: String,
+    /// 成交数量
+    #[serde(rename = "sz")]
+    pub sz: String,
+    /// 成交方向 (buy, sell)
+    pub side: String,
+    /// 成交时间
+    pub ts: String,
+}

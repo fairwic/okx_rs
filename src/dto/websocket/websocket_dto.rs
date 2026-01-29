@@ -33,11 +33,24 @@ pub struct TickerOkxResWsDto {
 }
 
 // Object {"code": String("60012"), "connId": String("5c13bf3a"), "event": String("error"), "msg": String("Illegal request: {\"ping\":1747191152912}")}
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CommonOkxWsResDto {
     pub code: String,
     #[serde(rename = "connId")]
     pub conn_id: String,
     pub event: String,
     pub msg: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct WsArg {
+    pub channel: String,
+    #[serde(rename = "instId")]
+    pub inst_id: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct OkxWsResDto<T> {
+    pub arg: WsArg,
+    pub data: Vec<T>,
 }
