@@ -60,8 +60,7 @@ pub fn timestamp_to_datetime(timestamp_ms: i64) -> Result<chrono::DateTime<chron
     let seconds = timestamp_ms / 1000;
     let nanos = ((timestamp_ms % 1000) * 1_000_000) as u32;
 
-    chrono::NaiveDateTime::from_timestamp_opt(seconds, nanos)
-        .map(|dt| chrono::DateTime::from_utc(dt, chrono::Utc))
+    chrono::DateTime::from_timestamp(seconds, nanos)
         .ok_or_else(|| Error::ParseError(format!("无法转换时间戳: {}", timestamp_ms)))
 }
 
@@ -75,11 +74,8 @@ pub async fn validate_system_time() -> Result<i64, error::Error> {
         .parse::<i64>()
         .map_err(|_| error::Error::ParseError("解析时间字符串失败".to_string()))?;
 
-    let time = chrono::DateTime::<chrono::Utc>::from_utc(
-        chrono::NaiveDateTime::from_timestamp_opt(time / 1000, ((time % 1000) * 1_000_000) as u32)
-            .ok_or_else(|| error::Error::ParseError("创建时间戳失败".to_string()))?,
-        chrono::Utc,
-    );
+    let time = chrono::DateTime::from_timestamp(time / 1000, ((time % 1000) * 1_000_000) as u32)
+        .ok_or_else(|| error::Error::ParseError("创建时间戳失败".to_string()))?;
 
     let now = chrono::Utc::now().timestamp_millis();
     let okx_time = time.timestamp_millis();

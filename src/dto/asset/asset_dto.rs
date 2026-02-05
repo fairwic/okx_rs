@@ -98,7 +98,8 @@ pub struct TransferRecord {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WithdrawalRecord {
     /// 提币申请ID
-    pub wdId: String,
+    #[serde(rename = "wdId")]
+    pub wd_id: String,
     /// 币种
     pub ccy: String,
     /// 链信息
@@ -119,7 +120,8 @@ pub struct WithdrawalRecord {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DepositRecord {
     /// 充值记录ID
-    pub depId: String,
+    #[serde(rename = "depId")]
+    pub dep_id: String,
     /// 币种
     pub ccy: String,
     /// 链信息
