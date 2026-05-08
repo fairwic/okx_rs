@@ -349,20 +349,95 @@ pub struct BalanceDetail {
 /// 账户配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AccountConfig {
-    /// 账户ID
-    #[serde(rename = "acctId")]
+    /// 当前请求账户ID
+    #[serde(rename = "uid", alias = "acctId")]
     pub account_id: String,
+    /// 当前请求母账户ID
+    #[serde(rename = "mainUid")]
+    pub main_uid: String,
+    /// 账户模式
+    #[serde(rename = "acctLv")]
+    pub account_level: String,
+    /// 账户自成交保护模式
+    #[serde(rename = "acctStpMode")]
+    pub account_stp_mode: String,
     /// 持仓类型
     #[serde(rename = "posMode")]
     pub position_mode: String,
     /// 是否自动借币
     #[serde(rename = "autoLoan")]
     pub auto_loan: bool,
+    /// 当前希腊字母展示方式
+    #[serde(rename = "greeksType")]
+    pub greeks_type: String,
+    /// 手续费类型
+    #[serde(rename = "feeType")]
+    pub fee_type: String,
     /// 账户级别
     pub level: String,
-    /// 杠杆模式
-    #[serde(rename = "mgnMode")]
-    pub margin_mode: MarginMode,
+    /// 特约用户的临时体验用户等级
+    #[serde(rename = "levelTmp", default)]
+    pub level_tmp: String,
+    /// 合约逐仓保证金设置
+    #[serde(rename = "ctIsoMode", default)]
+    pub contract_isolated_margin_mode: String,
+    /// 币币杠杆逐仓保证金设置
+    #[serde(rename = "mgnIsoMode", default)]
+    pub margin_isolated_margin_mode: String,
+    /// 是否开启现货借币
+    #[serde(rename = "enableSpotBorrow", default)]
+    pub enable_spot_borrow: bool,
+    /// 是否开启现货借币自动还币
+    #[serde(rename = "spotBorrowAutoRepay", default)]
+    pub spot_borrow_auto_repay: bool,
+    /// 现货对冲类型
+    #[serde(rename = "spotOffsetType", default)]
+    pub spot_offset_type: String,
+    /// 策略类型
+    #[serde(rename = "stgyType", default)]
+    pub strategy_type: String,
+    /// 跟单角色类型
+    #[serde(rename = "roleType", default)]
+    pub role_type: String,
+    /// 带单合约列表
+    #[serde(rename = "traderInsts", default)]
+    pub trader_instruments: Vec<String>,
+    /// 现货跟单角色类型
+    #[serde(rename = "spotRoleType", default)]
+    pub spot_role_type: String,
+    /// 现货带单产品列表
+    #[serde(rename = "spotTraderInsts", default)]
+    pub spot_trader_instruments: Vec<String>,
+    /// 期权交易权限是否开通
+    #[serde(rename = "opAuth", default)]
+    pub option_authority: String,
+    /// KYC等级
+    #[serde(rename = "kycLv", default)]
+    pub kyc_level: String,
+    /// API Key备注
+    #[serde(default)]
+    pub label: String,
+    /// API Key绑定的IP地址
+    #[serde(default)]
+    pub ip: String,
+    /// API Key类型
+    #[serde(rename = "type", default)]
+    pub account_type: String,
+    /// 爆仓档位
+    #[serde(rename = "liquidationGear", default)]
+    pub liquidation_gear: String,
+    /// API Key权限
+    #[serde(default)]
+    pub perm: String,
+    /// 结算币种
+    #[serde(rename = "settleCcy", default)]
+    pub settle_ccy: String,
+    /// 可选结算币种列表
+    #[serde(rename = "settleCcyList", default)]
+    pub settle_ccy_list: Vec<String>,
+    /// 兼容旧字段，当前账户配置接口不返回mgnMode
+    #[serde(rename = "mgnMode", default, skip_serializing_if = "Option::is_none")]
+    pub margin_mode: Option<MarginMode>,
 }
 
 /// 账户风险数据
@@ -376,6 +451,59 @@ pub struct AccountRisk {
     /// 总权益
     #[serde(rename = "totalEq")]
     pub total_equity: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_account_config_from_okx_config_response() {
+        let value = serde_json::json!({
+            "acctLv": "2",
+            "acctStpMode": "cancel_maker",
+            "autoLoan": false,
+            "ctIsoMode": "automatic",
+            "enableSpotBorrow": false,
+            "greeksType": "PA",
+            "feeType": "0",
+            "ip": "",
+            "type": "0",
+            "kycLv": "3",
+            "label": "v5 test",
+            "level": "Lv1",
+            "levelTmp": "",
+            "liquidationGear": "-1",
+            "mainUid": "44705892343619584",
+            "mgnIsoMode": "automatic",
+            "opAuth": "1",
+            "perm": "read_only,withdraw,trade",
+            "posMode": "long_short_mode",
+            "roleType": "0",
+            "spotBorrowAutoRepay": false,
+            "spotOffsetType": "",
+            "spotRoleType": "0",
+            "spotTraderInsts": [],
+            "stgyType": "0",
+            "traderInsts": [],
+            "uid": "44705892343619584",
+            "settleCcy": "USDC",
+            "settleCcyList": ["USD", "USDC", "USDG"]
+        });
+
+        let config: AccountConfig = serde_json::from_value(value).unwrap();
+
+        assert_eq!(config.account_id, "44705892343619584");
+        assert_eq!(config.main_uid, "44705892343619584");
+        assert_eq!(config.account_level, "2");
+        assert_eq!(config.account_stp_mode, "cancel_maker");
+        assert_eq!(config.position_mode, "long_short_mode");
+        assert!(!config.auto_loan);
+        assert_eq!(config.greeks_type, "PA");
+        assert_eq!(config.fee_type, "0");
+        assert_eq!(config.level, "Lv1");
+        assert_eq!(config.margin_mode, None);
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

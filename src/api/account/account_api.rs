@@ -232,4 +232,11 @@ mod tests {
         let positions = client.get_positions(None, None, None).await.unwrap();
         println!("{:?}", positions);
     }
+    #[tokio::test]
+    async fn test_get_config() {
+        init_env();
+        let client = OkxAccount::from_env().unwrap();
+        let x = client.get_config().await.unwrap();
+        println!("{:?}", x);
+    }
 }
