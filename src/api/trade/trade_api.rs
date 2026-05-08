@@ -1,7 +1,9 @@
 use crate::api::api_trait::OkxApiTrait;
 use crate::api::API_TRADE_PATH;
 use crate::client::OkxClient;
-use crate::dto::trade::trade_dto::{FeeRate, OrderPendingRespDto, OrderReqDto, OrderResDto};
+use crate::dto::trade::trade_dto::{
+    CancelOrderReqDto, FeeRate, OrderPendingRespDto, OrderReqDto, OrderResDto,
+};
 use crate::dto::trade_dto::{CloseOrderReqDto, OrdListReqDto, OrderDetailRespDto};
 use crate::error::Error;
 use reqwest::Method;
@@ -37,12 +39,12 @@ impl OkxTrade {
     /// 批量下单
     pub async fn place_multiple_orders(
         &self,
-        orders: Vec<serde_json::Value>,
-    ) -> Result<serde_json::Value, Error> {
+        orders: Vec<OrderReqDto>,
+    ) -> Result<Vec<OrderResDto>, Error> {
         let path = format!("{}/batch-orders", API_TRADE_PATH);
         let body_str = serde_json::to_string(&orders).map_err(Error::JsonError)?;
         self.client
-            .send_request::<serde_json::Value>(Method::POST, &path, &body_str)
+            .send_request::<Vec<OrderResDto>>(Method::POST, &path, &body_str)
             .await
     }
 
@@ -76,12 +78,12 @@ impl OkxTrade {
     /// 批量撤单
     pub async fn cancel_multiple_orders(
         &self,
-        orders: Vec<serde_json::Value>,
-    ) -> Result<serde_json::Value, Error> {
+        orders: Vec<CancelOrderReqDto>,
+    ) -> Result<Vec<OrderResDto>, Error> {
         let path = format!("{}/cancel-batch-orders", API_TRADE_PATH);
         let body_str = serde_json::to_string(&orders).map_err(Error::JsonError)?;
         self.client
-            .send_request::<serde_json::Value>(Method::POST, &path, &body_str)
+            .send_request::<Vec<OrderResDto>>(Method::POST, &path, &body_str)
             .await
     }
 
@@ -366,8 +368,107 @@ impl OkxTrade {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::Credentials;
+
+    fn sample_order() -> OrderReqDto {
+        OrderReqDto {
+            inst_id: "BTC-USDT".to_string(),
+            side: "buy".to_string(),
+            ord_type: "limit".to_string(),
+            sz: "0.001".to_string(),
+            td_mode: "cash".to_string(),
+            px: Some("20000".to_string()),
+            pos_side: None,
+            cl_ord_id: None,
+            tag: None,
+            reduce_only: None,
+            ccy: None,
+            px_usd: None,
+            px_vol: None,
+            tgt_ccy: None,
+            ban_amend: None,
+            quick_mgn_type: None,
+            stp_id: None,
+            stp_mode: None,
+            trade_quote_ccy: None,
+            attach_algo_ords: None,
+        }
+    }
 
     #[tokio::test]
+    async fn place_multiple_orders_accepts_order_dtos() {
+        let mut server = mockito::Server::new_async().await;
+        let mock = server
+            .mock("POST", "/api/v5/trade/batch-orders")
+            .match_body(mockito::Matcher::Json(serde_json::json!([
+                {
+                    "instId": "BTC-USDT",
+                    "tdMode": "cash",
+                    "side": "buy",
+                    "ordType": "limit",
+                    "sz": "0.001",
+                    "px": "20000"
+                }
+            ])))
+            .with_status(200)
+            .with_body(
+                r#"{"code":"0","msg":"","data":[{"ordId":"1","clOrdId":"","tag":"","sCode":"0","sMsg":"","ts":"1"}]}"#,
+            )
+            .create_async()
+            .await;
+
+        let mut client =
+            OkxClient::new(Credentials::new("key", "secret", "passphrase", "0")).expect("client");
+        client.set_base_url(server.url());
+        let trade = OkxTrade::new(client);
+
+        let result = trade
+            .place_multiple_orders(vec![sample_order()])
+            .await
+            .unwrap();
+
+        assert_eq!(result[0].ord_id, "1");
+        mock.assert_async().await;
+    }
+
+    #[tokio::test]
+    async fn cancel_multiple_orders_accepts_cancel_order_dtos() {
+        let mut server = mockito::Server::new_async().await;
+        let mock = server
+            .mock("POST", "/api/v5/trade/cancel-batch-orders")
+            .match_body(mockito::Matcher::Json(serde_json::json!([
+                {
+                    "instId": "BTC-USDT",
+                    "ordId": "1"
+                }
+            ])))
+            .with_status(200)
+            .with_body(
+                r#"{"code":"0","msg":"","data":[{"ordId":"1","clOrdId":"","tag":"","sCode":"0","sMsg":"","ts":"1"}]}"#,
+            )
+            .create_async()
+            .await;
+
+        let mut client =
+            OkxClient::new(Credentials::new("key", "secret", "passphrase", "0")).expect("client");
+        client.set_base_url(server.url());
+        let trade = OkxTrade::new(client);
+
+        let result = trade
+            .cancel_multiple_orders(vec![CancelOrderReqDto {
+                inst_id: "BTC-USDT".to_string(),
+                ord_id: Some("1".to_string()),
+                cl_ord_id: None,
+            }])
+            .await
+            .unwrap();
+
+        assert_eq!(result[0].ord_id, "1");
+        mock.assert_async().await;
+    }
+
+    #[tokio::test]
+    #[ignore = "requires real OKX credentials and places a live order"]
     async fn test_place_order() {
         // 仅作为示例，实际测试需要提供有效的值
         let trade = OkxTrade::from_env().expect("无法从环境变量创建交易API");
@@ -391,6 +492,7 @@ mod tests {
                 quick_mgn_type: None,
                 stp_id: None,
                 stp_mode: None,
+                trade_quote_ccy: None,
                 attach_algo_ords: None,
             })
             .await;
